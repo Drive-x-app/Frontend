@@ -126,40 +126,40 @@ export default function SelectLocationScreen() {
             </View>
           )}
 
-          {/* Top Floating Map Controls: Back Button & Centered Logo */}
-          <View style={styles.topMapHeader}>
-            <TouchableOpacity
-              style={styles.backButtonCircle}
-              activeOpacity={0.8}
-              onPress={handleBack}
-              accessibilityLabel="Go back"
-            >
-              <ArrowLeft size={19} color="#0E1E38" strokeWidth={2.4} />
-            </TouchableOpacity>
-
-            <View style={styles.brandRow}>
-              <Image
-                source={require('../../assets/DriveX_Logo.png')}
-                style={styles.logoEmblem}
-                resizeMode="contain"
-              />
-              <View style={styles.brandTextRow}>
-                <Text style={styles.brandTextNavy}>Driver</Text>
-                <Text style={styles.brandTextTeal}>X</Text>
-              </View>
-            </View>
-
-            {/* Placeholder to balance back button */}
-            <View style={{ width: 38 }} />
-          </View>
-
-          {/* Upper Section: Coimbatore Interactive Map Background */}
+          {/* Upper Section: Coimbatore Interactive Map Background with Overlaid Controls */}
           <View style={styles.mapContainer}>
             <Image
               source={require('../../assets/coimbatore_map_bg.jpg')}
               style={StyleSheet.absoluteFill}
               resizeMode="cover"
             />
+
+            {/* Top Floating Map Controls: Back Button & Centered Logo */}
+            <View style={styles.topMapHeader}>
+              <TouchableOpacity
+                style={styles.backButtonCircle}
+                activeOpacity={0.8}
+                onPress={handleBack}
+                accessibilityLabel="Go back"
+              >
+                <ArrowLeft size={19} color="#0E1E38" strokeWidth={2.4} />
+              </TouchableOpacity>
+
+              <View style={styles.brandCenter}>
+                <Image
+                  source={require('../../assets/DriveX_Logo.png')}
+                  style={styles.logoEmblem}
+                  resizeMode="contain"
+                />
+                <View style={styles.brandTextRow}>
+                  <Text style={styles.brandTextNavy}>Driver</Text>
+                  <Text style={styles.brandTextTeal}>X</Text>
+                </View>
+              </View>
+
+              {/* Placeholder to balance back button */}
+              <View style={{ width: 42 }} />
+            </View>
 
             {/* "Use Current Location" Floating Pill on top-left of map */}
             <TouchableOpacity
@@ -172,29 +172,33 @@ export default function SelectLocationScreen() {
             </TouchableOpacity>
 
             {/* Map Landmark Callouts matching design */}
-            <View style={[styles.mapLandmarkBadge, { top: 22, right: 30 }]}>
+            <View style={[styles.mapLandmarkBadge, { top: 38, right: 18 }]}>
               <ShoppingBag size={11} color="#0284C7" strokeWidth={2.2} />
               <Text style={styles.landmarkText}>Brookefields Mall</Text>
             </View>
 
-            <View style={[styles.mapLandmarkBadge, { top: 68, right: 90 }]}>
+            <View style={[styles.mapLandmarkBadge, { top: 78, left: 165 }]}>
               <Train size={11} color="#475569" strokeWidth={2.2} />
               <Text style={styles.landmarkText}>Coimbatore Railway Station</Text>
             </View>
 
-            <View style={[styles.mapLandmarkBadge, { top: 120, left: 16 }]}>
+            <Text style={[styles.mapPlainLabel, { top: 104, right: 28 }]}>RS Puram</Text>
+
+            <View style={[styles.mapLandmarkBadge, { top: 135, left: 16 }]}>
               <Bus size={11} color="#475569" strokeWidth={2.2} />
               <Text style={styles.landmarkText}>Gandhipuram Bus Stand</Text>
             </View>
 
-            <View style={[styles.mapLandmarkBadge, { top: 130, right: 26 }]}>
+            <View style={[styles.mapLandmarkBadge, { top: 145, right: 20 }]}>
               <Building2 size={11} color="#475569" strokeWidth={2.2} />
               <Text style={styles.landmarkText}>Tidel Park Coimbatore</Text>
             </View>
 
-            <View style={[styles.mapLandmarkBadge, { bottom: 30, right: 20 }]}>
+            <Text style={[styles.mapPlainLabel, { top: 188, right: 75 }]}>Peelamedu</Text>
+
+            <View style={[styles.mapLandmarkBadge, { top: 206, right: 16 }]}>
               <Plane size={11} color="#0284C7" strokeWidth={2.2} />
-              <Text style={styles.landmarkText}>Coimbatore Airport</Text>
+              <Text style={styles.landmarkText}>Coimbatore International Airport</Text>
             </View>
 
             {/* "Your Location" Pulsing GPS Marker & Callout */}
@@ -511,45 +515,40 @@ const styles = StyleSheet.create({
   },
   topMapHeader: {
     position: 'absolute',
-    top: Platform.OS === 'web' ? 36 : 46,
+    top: Platform.OS === 'web' ? 12 : 16,
     left: 0,
     right: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    zIndex: 15,
+    zIndex: 25,
   },
   backButtonCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.12,
-    shadowRadius: 6,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  brandCenter: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   brandRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.94)',
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 20,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 3,
   },
   logoEmblem: {
-    width: 32,
-    height: 20,
-    marginRight: 5,
+    width: 44,
+    height: 22,
+    marginBottom: -2,
   },
   brandTextRow: {
     flexDirection: 'row',
@@ -557,25 +556,25 @@ const styles = StyleSheet.create({
   },
   brandTextNavy: {
     fontFamily: FONT.bold,
-    fontSize: 18,
+    fontSize: 19,
     color: '#0E1E38',
     letterSpacing: -0.4,
   },
   brandTextTeal: {
     fontFamily: FONT.bold,
-    fontSize: 18,
+    fontSize: 19,
     color: '#00D2B4',
     letterSpacing: -0.4,
   },
   mapContainer: {
-    height: 280,
+    height: 295,
     width: '100%',
     position: 'relative',
     backgroundColor: '#E2E8F0',
   },
   useCurrentLocationPill: {
     position: 'absolute',
-    top: 54,
+    top: Platform.OS === 'web' ? 62 : 68,
     left: 16,
     flexDirection: 'row',
     alignItems: 'center',
@@ -585,10 +584,11 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     borderRadius: 20,
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 5,
     elevation: 3,
+    zIndex: 20,
   },
   useCurrentLocationText: {
     fontFamily: FONT.bold,
@@ -612,10 +612,16 @@ const styles = StyleSheet.create({
     fontSize: 9.5,
     color: '#334155',
   },
+  mapPlainLabel: {
+    position: 'absolute',
+    fontFamily: FONT.semiBold,
+    fontSize: 10.5,
+    color: '#475569',
+  },
   yourLocationContainer: {
     position: 'absolute',
     top: 96,
-    left: '46%',
+    left: '42%',
     alignItems: 'center',
   },
   yourLocationTooltip: {
