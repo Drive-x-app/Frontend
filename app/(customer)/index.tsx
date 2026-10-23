@@ -79,6 +79,7 @@ export default function CustomerHomeScreen() {
 
   const handleBookDriver = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    router.push('/(customer)/select-location');
   };
 
   const handleTabPress = (tab: 'home' | 'bookings' | 'history' | 'profile') => {
@@ -242,63 +243,66 @@ export default function CustomerHomeScreen() {
             {/* 3. Location Input Card */}
             <View style={styles.locationCard}>
               {/* Pickup Location Row */}
-              <Pressable
+              <TouchableOpacity
                 style={styles.locationRow}
-                onPress={() => pickupInputRef.current?.focus()}
+                activeOpacity={0.85}
+                onPress={() => router.push('/(customer)/select-location')}
               >
                 <View style={[styles.locationPinBadge, { backgroundColor: '#E6FAF6' }]}>
                   <MapPin size={17} color="#00D2B4" fill="#00D2B4" strokeWidth={1} />
                 </View>
 
-                <View style={styles.locationInputWrapper}>
+                <View style={styles.locationInputWrapper} pointerEvents="none">
                   <Text style={styles.locationLabel}>Pickup Location</Text>
                   <TextInput
-                    ref={pickupInputRef}
                     style={styles.locationTextInput}
                     placeholder="Enter pickup location"
                     placeholderTextColor="#94A3B8"
                     value={pickupLocation}
-                    onChangeText={setPickupLocation}
+                    editable={false}
                   />
                 </View>
 
                 <TouchableOpacity
                   style={styles.locateButton}
                   activeOpacity={0.7}
-                  onPress={handleUseCurrentLocation}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    handleUseCurrentLocation();
+                  }}
                   accessibilityLabel="Use current location"
                 >
                   <LocateFixed size={18} color="#94A3B8" strokeWidth={2} />
                 </TouchableOpacity>
-              </Pressable>
+              </TouchableOpacity>
 
               {/* Divider Line */}
               <View style={styles.locationDivider} />
 
               {/* Drop Location Row */}
-              <Pressable
+              <TouchableOpacity
                 style={styles.locationRow}
-                onPress={() => dropInputRef.current?.focus()}
+                activeOpacity={0.85}
+                onPress={() => router.push('/(customer)/select-location')}
               >
                 <View style={[styles.locationPinBadge, { backgroundColor: '#FEE2E2' }]}>
                   <MapPin size={17} color="#EF4444" fill="#EF4444" strokeWidth={1} />
                 </View>
 
-                <View style={styles.locationInputWrapper}>
+                <View style={styles.locationInputWrapper} pointerEvents="none">
                   <View style={styles.dropLabelRow}>
                     <Text style={styles.locationLabel}>Drop Location</Text>
                     <Text style={styles.optionalLabel}> (Optional)</Text>
                   </View>
                   <TextInput
-                    ref={dropInputRef}
                     style={styles.locationTextInput}
                     placeholder="Enter drop location (optional)"
                     placeholderTextColor="#94A3B8"
                     value={dropLocation}
-                    onChangeText={setDropLocation}
+                    editable={false}
                   />
                 </View>
-              </Pressable>
+              </TouchableOpacity>
             </View>
 
             {/* 4. Book a Driver Main Action Button */}
