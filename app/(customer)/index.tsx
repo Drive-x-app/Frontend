@@ -94,12 +94,21 @@ export default function CustomerHomeScreen() {
     return <Clock size={iconSize} color={iconColor} strokeWidth={2.4} />;
   };
 
+  const desktopFrameHeight = isDesktopOrTablet ? Math.min(windowHeight - 24, 880) : '100%';
+
   return (
     <View style={styles.outerContainer}>
       <StatusBar style="dark" />
 
       {/* Responsive App Frame */}
-      <View style={[styles.appFrame, isDesktopOrTablet && styles.appFrameDesktop, { minHeight: windowHeight }]}>
+      <View
+        style={[
+          styles.appFrame,
+          isDesktopOrTablet
+            ? [styles.appFrameDesktop, { height: desktopFrameHeight }]
+            : { height: '100%', flex: 1 },
+        ]}
+      >
         <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
           {/* Simulated iOS Status Bar on Desktop/Web for exact design replication */}
           {isDesktopOrTablet && (
@@ -171,9 +180,9 @@ export default function CustomerHomeScreen() {
           >
             {/* 1. Hero Promo Banner */}
             <View style={styles.heroBanner}>
-              {/* Composite Image showing white sedan & chauffeur on the right */}
+              {/* Exact user-provided hero banner image */}
               <Image
-                source={require('../../assets/home_hero_driver.jpg')}
+                source={require('../../assets/Home hero.png')}
                 style={StyleSheet.absoluteFill}
                 resizeMode="cover"
               />
@@ -463,8 +472,8 @@ export default function CustomerHomeScreen() {
               <ChevronRight size={16} color="#94A3B8" strokeWidth={2.4} style={styles.bookingArrow} />
             </View>
 
-            {/* Bottom Padding for Fixed Tab Bar */}
-            <View style={{ height: 95 }} />
+            {/* Bottom Padding */}
+            <View style={{ height: 16 }} />
           </ScrollView>
 
           {/* 8. Bottom Navigation Tab Bar with Home Indicator */}
@@ -577,31 +586,35 @@ export default function CustomerHomeScreen() {
 const styles = StyleSheet.create({
   outerContainer: {
     flex: 1,
-    backgroundColor: '#F3F6FA',
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#0F172A',
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
   appFrame: {
     width: '100%',
     maxWidth: '100%',
     backgroundColor: '#FFFFFF',
     position: 'relative',
+    overflow: 'hidden',
   },
   appFrameDesktop: {
     maxWidth: 420,
-    borderRadius: 36,
-    marginVertical: 18,
-    shadowColor: '#071226',
+    borderRadius: 38,
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 16 },
-    shadowOpacity: 0.14,
-    shadowRadius: 32,
-    elevation: 10,
+    shadowOpacity: 0.25,
+    shadowRadius: 36,
+    elevation: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    overflow: 'hidden',
+    borderColor: '#334155',
   },
   safeArea: {
     flex: 1,
+    height: '100%',
+    flexDirection: 'column',
   },
   simulatedStatusBar: {
     flexDirection: 'row',
@@ -641,6 +654,10 @@ const styles = StyleSheet.create({
     paddingTop: 6,
     paddingBottom: 12,
     backgroundColor: '#FFFFFF',
+    flexShrink: 0,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F8FAFC',
+    zIndex: 10,
   },
   brandRow: {
     flexDirection: 'row',
@@ -1075,10 +1092,7 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
   bottomTabBarContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+    flexShrink: 0,
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
@@ -1087,6 +1101,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 8,
+    zIndex: 10,
   },
   bottomTabBar: {
     height: 60,

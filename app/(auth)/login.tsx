@@ -98,12 +98,21 @@ export default function LoginScreen() {
 
   const isFormValid = phoneNumber.trim().length >= 10;
 
+  const desktopFrameHeight = isDesktopOrTablet ? Math.min(windowHeight - 24, 880) : '100%';
+
   const screenBody = (
     <View style={styles.outerContainer}>
       <StatusBar style="dark" />
 
-      {/* Responsive App Frame (centers on tablet/desktop while maintaining 100% on mobile) */}
-      <View style={[styles.appFrame, isDesktopOrTablet && styles.appFrameDesktop, { minHeight: windowHeight }]}>
+      {/* Responsive App Frame */}
+      <View
+        style={[
+          styles.appFrame,
+          isDesktopOrTablet
+            ? [styles.appFrameDesktop, { height: desktopFrameHeight }]
+            : { height: '100%', flex: 1 },
+        ]}
+      >
         {/* Background illustration containing car, road, phone pin graphic & bottom cityscape */}
         <View pointerEvents="none" style={styles.backgroundImage}>
           <Image
