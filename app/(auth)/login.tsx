@@ -24,6 +24,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
 import { useAuthStore, COUNTRIES, Country } from '../../src/store/authStore';
+import { FONT } from '../../src/theme/typography';
 
 const IndianFlagBadge = () => (
   <View style={styles.flagBadge}>
@@ -414,14 +415,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   brandTitleNavy: {
+    fontFamily: FONT.bold,
     fontSize: 22,
-    fontWeight: '800',
     color: '#0E1E38',
     letterSpacing: -0.5,
   },
   brandTitleTeal: {
+    fontFamily: FONT.bold,
     fontSize: 22,
-    fontWeight: '800',
     color: '#00D2B4',
     letterSpacing: -0.5,
   },
@@ -430,22 +431,22 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   titleNavy: {
+    fontFamily: FONT.bold,
     fontSize: 27,
-    fontWeight: '800',
     color: '#0C1E3D',
     letterSpacing: -0.4,
     lineHeight: 33,
   },
   titleTeal: {
+    fontFamily: FONT.bold,
     fontSize: 27,
-    fontWeight: '800',
     color: '#00D2B4',
     letterSpacing: -0.4,
     lineHeight: 33,
   },
   subtitle: {
+    fontFamily: FONT.regular,
     fontSize: 13.5,
-    fontWeight: '400',
     color: '#64748B',
     lineHeight: 19.5,
   },
@@ -453,8 +454,8 @@ const styles = StyleSheet.create({
     marginTop: 34,
   },
   inputLabel: {
+    fontFamily: FONT.bold,
     fontSize: 14.5,
-    fontWeight: '700',
     color: '#0E1E38',
     marginBottom: 9,
   },
@@ -511,8 +512,8 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   countryCodeText: {
+    fontFamily: FONT.semiBold,
     fontSize: 15,
-    fontWeight: '600',
     color: '#0E1E38',
   },
   chevronIcon: {
@@ -534,25 +535,25 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   textInput: {
+    fontFamily: FONT.medium,
     flex: 1,
     height: 48,
     fontSize: 15,
-    fontWeight: '500',
     color: '#0E1E38',
     paddingVertical: 0,
     paddingHorizontal: 4,
   },
   helperText: {
+    fontFamily: FONT.regular,
     fontSize: 12.5,
     color: '#64748B',
     marginTop: 8,
-    fontWeight: '400',
   },
   errorText: {
+    fontFamily: FONT.medium,
     fontSize: 12.5,
     color: '#EF4444',
     marginTop: 8,
-    fontWeight: '500',
   },
   continueButtonWrapper: {
     marginTop: 26,
@@ -577,8 +578,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   continueButtonText: {
+    fontFamily: FONT.bold,
     fontSize: 16.5,
-    fontWeight: '700',
     color: '#072038',
   },
   termsContainer: {
@@ -586,15 +587,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   termsText: {
+    fontFamily: FONT.regular,
     fontSize: 12.5,
     color: '#64748B',
     textAlign: 'center',
     lineHeight: 18,
   },
   termsLink: {
+    fontFamily: FONT.medium,
     color: '#00A896',
     textDecorationLine: 'underline',
-    fontWeight: '500',
   },
   modalOverlay: {
     flex: 1,
@@ -628,8 +630,8 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F1F5F9',
   },
   modalTitle: {
+    fontFamily: FONT.bold,
     fontSize: 17,
-    fontWeight: '700',
     color: '#0E1E38',
   },
   countryItem: {
@@ -652,8 +654,8 @@ const styles = StyleSheet.create({
     fontSize: 22,
   },
   countryItemName: {
+    fontFamily: FONT.medium,
     fontSize: 15,
-    fontWeight: '500',
     color: '#0E1E38',
   },
   countryItemRight: {
@@ -662,8 +664,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   countryItemDialCode: {
+    fontFamily: FONT.semiBold,
     fontSize: 14.5,
-    fontWeight: '600',
     color: '#64748B',
   },
 });

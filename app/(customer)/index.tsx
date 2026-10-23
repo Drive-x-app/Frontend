@@ -32,7 +32,8 @@ import {
   History,
   User,
   ChevronRight,
-  Check,
+  Wifi,
+  Battery,
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
@@ -41,6 +42,7 @@ import {
   DURATION_OPTIONS,
   SavedPlace,
 } from '../../src/store/bookingStore';
+import { FONT } from '../../src/theme/typography';
 
 export default function CustomerHomeScreen() {
   const router = useRouter();
@@ -77,7 +79,6 @@ export default function CustomerHomeScreen() {
 
   const handleBookDriver = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-    // Prepared for booking confirmation flow
   };
 
   const handleTabPress = (tab: 'home' | 'bookings' | 'history' | 'profile') => {
@@ -86,20 +87,37 @@ export default function CustomerHomeScreen() {
   };
 
   const renderDurationIcon = (id: string, isSelected: boolean) => {
-    const iconColor = isSelected ? '#00D2B4' : '#64748B';
+    const iconColor = isSelected ? '#00D2B4' : '#00D2B4';
     const iconSize = 18;
-    if (id === 'fullday') return <Sun size={iconSize} color={iconColor} strokeWidth={2.2} />;
+    if (id === 'fullday') return <Sun size={iconSize} color={iconColor} strokeWidth={2.4} />;
     if (id === '1week') return <Calendar size={iconSize} color={iconColor} strokeWidth={2.2} />;
-    return <Clock size={iconSize} color={iconColor} strokeWidth={2.2} />;
+    return <Clock size={iconSize} color={iconColor} strokeWidth={2.4} />;
   };
 
   return (
     <View style={styles.outerContainer}>
       <StatusBar style="dark" />
 
-      {/* Responsive Container (centered on desktop/tablets, full width on mobile) */}
+      {/* Responsive App Frame */}
       <View style={[styles.appFrame, isDesktopOrTablet && styles.appFrameDesktop, { minHeight: windowHeight }]}>
         <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+          {/* Simulated iOS Status Bar on Desktop/Web for exact design replication */}
+          {isDesktopOrTablet && (
+            <View style={styles.simulatedStatusBar}>
+              <Text style={styles.simulatedStatusTime}>9:41</Text>
+              <View style={styles.simulatedStatusIcons}>
+                <View style={styles.cellularBars}>
+                  <View style={[styles.cellularBar, { height: 4 }]} />
+                  <View style={[styles.cellularBar, { height: 6 }]} />
+                  <View style={[styles.cellularBar, { height: 8 }]} />
+                  <View style={[styles.cellularBar, { height: 10 }]} />
+                </View>
+                <Wifi size={14} color="#0E1E38" strokeWidth={2.2} />
+                <Battery size={16} color="#0E1E38" strokeWidth={2.2} />
+              </View>
+            </View>
+          )}
+
           {/* Top Bar Header */}
           <View style={styles.headerBar}>
             {/* Brand Logo & Wordmark */}
@@ -154,7 +172,7 @@ export default function CustomerHomeScreen() {
             {/* 1. Hero Promo Banner */}
             <View style={styles.heroBanner}>
               <LinearGradient
-                colors={['#F0F7FF', '#E4F1FE']}
+                colors={['#EDF5FE', '#E4F0FD']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.heroGradient}
@@ -238,7 +256,7 @@ export default function CustomerHomeScreen() {
                 onPress={() => pickupInputRef.current?.focus()}
               >
                 <View style={[styles.locationPinBadge, { backgroundColor: '#E6FAF6' }]}>
-                  <MapPin size={17} color="#00D2B4" strokeWidth={2.4} />
+                  <MapPin size={17} color="#00D2B4" fill="#00D2B4" strokeWidth={1} />
                 </View>
 
                 <View style={styles.locationInputWrapper}>
@@ -272,11 +290,14 @@ export default function CustomerHomeScreen() {
                 onPress={() => dropInputRef.current?.focus()}
               >
                 <View style={[styles.locationPinBadge, { backgroundColor: '#FEE2E2' }]}>
-                  <MapPin size={17} color="#EF4444" strokeWidth={2.4} />
+                  <MapPin size={17} color="#EF4444" fill="#EF4444" strokeWidth={1} />
                 </View>
 
                 <View style={styles.locationInputWrapper}>
-                  <Text style={styles.locationLabel}>Drop Location (Optional)</Text>
+                  <View style={styles.dropLabelRow}>
+                    <Text style={styles.locationLabel}>Drop Location</Text>
+                    <Text style={styles.optionalLabel}> (Optional)</Text>
+                  </View>
                   <TextInput
                     ref={dropInputRef}
                     style={styles.locationTextInput}
@@ -296,17 +317,17 @@ export default function CustomerHomeScreen() {
               onPress={handleBookDriver}
             >
               <LinearGradient
-                colors={['#00E5C4', '#00D2B4', '#00C2A4']}
+                colors={['#00E5C4', '#00D2B4']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.bookButton}
               >
                 <Text style={styles.bookButtonText}>Book a Driver</Text>
-                <ArrowRight size={19} color="#072038" strokeWidth={2.6} />
+                <ArrowRight size={18} color="#072038" strokeWidth={2.6} />
               </LinearGradient>
             </TouchableOpacity>
 
-            {/* 5. Trust / Feature Badges */}
+            {/* 5. Trust / Feature Badges with vertical dividers */}
             <View style={styles.featuresRow}>
               <View style={styles.featureItem}>
                 <View style={styles.featureIconBadge}>
@@ -316,6 +337,8 @@ export default function CustomerHomeScreen() {
                 <Text style={styles.featureTitle}>Drivers</Text>
               </View>
 
+              <View style={styles.featureDivider} />
+
               <View style={styles.featureItem}>
                 <View style={styles.featureIconBadge}>
                   <Car size={20} color="#00D2B4" strokeWidth={2.2} />
@@ -324,6 +347,8 @@ export default function CustomerHomeScreen() {
                 <Text style={styles.featureTitle}>Tracking</Text>
               </View>
 
+              <View style={styles.featureDivider} />
+
               <View style={styles.featureItem}>
                 <View style={styles.featureIconBadge}>
                   <CreditCard size={20} color="#00D2B4" strokeWidth={2.2} />
@@ -331,6 +356,8 @@ export default function CustomerHomeScreen() {
                 <Text style={styles.featureTitle}>Secure</Text>
                 <Text style={styles.featureTitle}>Payments</Text>
               </View>
+
+              <View style={styles.featureDivider} />
 
               <View style={styles.featureItem}>
                 <View style={styles.featureIconBadge}>
@@ -411,7 +438,7 @@ export default function CustomerHomeScreen() {
                 <Text style={styles.bookingDateText}>Today, 10:00 AM</Text>
                 <Text style={styles.bookingDurationText}>2 Hours</Text>
                 <View style={styles.completedBadge}>
-                  <Check size={11} color="#10B981" strokeWidth={3} />
+                  <View style={styles.completedGreenDot} />
                   <Text style={styles.completedBadgeText}>Completed</Text>
                 </View>
               </View>
@@ -419,7 +446,7 @@ export default function CustomerHomeScreen() {
               {/* Right Route Timeline */}
               <View style={styles.bookingRouteContainer}>
                 <View style={styles.timelineRow}>
-                  <View style={[styles.timelineDot, { backgroundColor: '#10B981' }]} />
+                  <View style={[styles.timelineDot, { backgroundColor: '#00D2B4' }]} />
                   <Text style={styles.timelineText} numberOfLines={1}>
                     Home
                   </Text>
@@ -439,102 +466,109 @@ export default function CustomerHomeScreen() {
             </View>
 
             {/* Bottom Padding for Fixed Tab Bar */}
-            <View style={{ height: 90 }} />
+            <View style={{ height: 95 }} />
           </ScrollView>
 
-          {/* 8. Bottom Navigation Tab Bar */}
-          <View style={styles.bottomTabBar}>
-            {/* Home Tab */}
-            <TouchableOpacity
-              style={styles.tabItem}
-              activeOpacity={0.8}
-              onPress={() => handleTabPress('home')}
-            >
-              <View style={[styles.tabActivePill, activeTab === 'home' && styles.tabActivePillSelected]}>
-                <HomeIcon
-                  size={20}
-                  color={activeTab === 'home' ? '#00D2B4' : '#94A3B8'}
-                  strokeWidth={2.4}
-                />
-              </View>
-              <Text
-                style={[
-                  styles.tabLabel,
-                  activeTab === 'home' && styles.tabLabelActive,
-                ]}
+          {/* 8. Bottom Navigation Tab Bar with Home Indicator */}
+          <View style={styles.bottomTabBarContainer}>
+            <View style={styles.bottomTabBar}>
+              {/* Home Tab */}
+              <TouchableOpacity
+                style={styles.tabItem}
+                activeOpacity={0.8}
+                onPress={() => handleTabPress('home')}
               >
-                Home
-              </Text>
-            </TouchableOpacity>
+                <View style={[styles.tabActivePill, activeTab === 'home' && styles.tabActivePillSelected]}>
+                  <HomeIcon
+                    size={20}
+                    color={activeTab === 'home' ? '#00D2B4' : '#94A3B8'}
+                    strokeWidth={2.4}
+                  />
+                </View>
+                <Text
+                  style={[
+                    styles.tabLabel,
+                    activeTab === 'home' && styles.tabLabelActive,
+                  ]}
+                >
+                  Home
+                </Text>
+              </TouchableOpacity>
 
-            {/* My Bookings Tab */}
-            <TouchableOpacity
-              style={styles.tabItem}
-              activeOpacity={0.8}
-              onPress={() => handleTabPress('bookings')}
-            >
-              <View style={[styles.tabActivePill, activeTab === 'bookings' && styles.tabActivePillSelected]}>
-                <Calendar
-                  size={20}
-                  color={activeTab === 'bookings' ? '#00D2B4' : '#94A3B8'}
-                  strokeWidth={2.2}
-                />
-              </View>
-              <Text
-                style={[
-                  styles.tabLabel,
-                  activeTab === 'bookings' && styles.tabLabelActive,
-                ]}
+              {/* My Bookings Tab */}
+              <TouchableOpacity
+                style={styles.tabItem}
+                activeOpacity={0.8}
+                onPress={() => handleTabPress('bookings')}
               >
-                My Bookings
-              </Text>
-            </TouchableOpacity>
+                <View style={[styles.tabActivePill, activeTab === 'bookings' && styles.tabActivePillSelected]}>
+                  <Calendar
+                    size={20}
+                    color={activeTab === 'bookings' ? '#00D2B4' : '#94A3B8'}
+                    strokeWidth={2.2}
+                  />
+                </View>
+                <Text
+                  style={[
+                    styles.tabLabel,
+                    activeTab === 'bookings' && styles.tabLabelActive,
+                  ]}
+                >
+                  My Bookings
+                </Text>
+              </TouchableOpacity>
 
-            {/* Trip History Tab */}
-            <TouchableOpacity
-              style={styles.tabItem}
-              activeOpacity={0.8}
-              onPress={() => handleTabPress('history')}
-            >
-              <View style={[styles.tabActivePill, activeTab === 'history' && styles.tabActivePillSelected]}>
-                <History
-                  size={20}
-                  color={activeTab === 'history' ? '#00D2B4' : '#94A3B8'}
-                  strokeWidth={2.2}
-                />
-              </View>
-              <Text
-                style={[
-                  styles.tabLabel,
-                  activeTab === 'history' && styles.tabLabelActive,
-                ]}
+              {/* Trip History Tab */}
+              <TouchableOpacity
+                style={styles.tabItem}
+                activeOpacity={0.8}
+                onPress={() => handleTabPress('history')}
               >
-                Trip History
-              </Text>
-            </TouchableOpacity>
+                <View style={[styles.tabActivePill, activeTab === 'history' && styles.tabActivePillSelected]}>
+                  <History
+                    size={20}
+                    color={activeTab === 'history' ? '#00D2B4' : '#94A3B8'}
+                    strokeWidth={2.2}
+                  />
+                </View>
+                <Text
+                  style={[
+                    styles.tabLabel,
+                    activeTab === 'history' && styles.tabLabelActive,
+                  ]}
+                >
+                  Trip History
+                </Text>
+              </TouchableOpacity>
 
-            {/* Profile Tab */}
-            <TouchableOpacity
-              style={styles.tabItem}
-              activeOpacity={0.8}
-              onPress={() => handleTabPress('profile')}
-            >
-              <View style={[styles.tabActivePill, activeTab === 'profile' && styles.tabActivePillSelected]}>
-                <User
-                  size={20}
-                  color={activeTab === 'profile' ? '#00D2B4' : '#94A3B8'}
-                  strokeWidth={2.2}
-                />
-              </View>
-              <Text
-                style={[
-                  styles.tabLabel,
-                  activeTab === 'profile' && styles.tabLabelActive,
-                ]}
+              {/* Profile Tab */}
+              <TouchableOpacity
+                style={styles.tabItem}
+                activeOpacity={0.8}
+                onPress={() => handleTabPress('profile')}
               >
-                Profile
-              </Text>
-            </TouchableOpacity>
+                <View style={[styles.tabActivePill, activeTab === 'profile' && styles.tabActivePillSelected]}>
+                  <User
+                    size={20}
+                    color={activeTab === 'profile' ? '#00D2B4' : '#94A3B8'}
+                    strokeWidth={2.2}
+                  />
+                </View>
+                <Text
+                  style={[
+                    styles.tabLabel,
+                    activeTab === 'profile' && styles.tabLabelActive,
+                  ]}
+                >
+                  Profile
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* iOS Bottom Indicator Bar */}
+            <View style={styles.homeIndicatorWrapper}>
+              <View style={styles.homeIndicator} />
+            </View>
           </View>
         </SafeAreaView>
       </View>
@@ -556,14 +590,14 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   appFrameDesktop: {
-    maxWidth: 440,
-    borderRadius: 24,
-    marginVertical: 20,
+    maxWidth: 420,
+    borderRadius: 36,
+    marginVertical: 18,
     shadowColor: '#071226',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.12,
-    shadowRadius: 28,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.14,
+    shadowRadius: 32,
+    elevation: 10,
     borderWidth: 1,
     borderColor: '#E2E8F0',
     overflow: 'hidden',
@@ -571,12 +605,42 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
+  simulatedStatusBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 22,
+    paddingTop: 10,
+    paddingBottom: 4,
+  },
+  simulatedStatusTime: {
+    fontFamily: FONT.semiBold,
+    fontSize: 14,
+    color: '#0E1E38',
+  },
+  simulatedStatusIcons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  cellularBars: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 1.5,
+    height: 10,
+    marginRight: 2,
+  },
+  cellularBar: {
+    width: 2.5,
+    backgroundColor: '#0E1E38',
+    borderRadius: 1,
+  },
   headerBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 18,
-    paddingTop: 8,
+    paddingTop: 6,
     paddingBottom: 12,
     backgroundColor: '#FFFFFF',
   },
@@ -594,14 +658,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   brandTextNavy: {
+    fontFamily: FONT.bold,
     fontSize: 21,
-    fontWeight: '800',
     color: '#0E1E38',
     letterSpacing: -0.4,
   },
   brandTextTeal: {
+    fontFamily: FONT.bold,
     fontSize: 21,
-    fontWeight: '800',
     color: '#00D2B4',
     letterSpacing: -0.4,
   },
@@ -617,23 +681,21 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
     position: 'relative',
   },
   notificationDot: {
     position: 'absolute',
-    top: 8,
-    right: 9,
+    top: 7,
+    right: 8,
     width: 7,
     height: 7,
     borderRadius: 3.5,
     backgroundColor: '#EF4444',
   },
   avatarButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     overflow: 'hidden',
     borderWidth: 1.5,
     borderColor: '#E2E8F0',
@@ -656,14 +718,14 @@ const styles = StyleSheet.create({
     shadowColor: '#00D2B4',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
-    shadowRadius: 12,
+    shadowRadius: 10,
     elevation: 3,
   },
   heroGradient: {
     flexDirection: 'row',
     paddingLeft: 18,
     paddingRight: 6,
-    paddingVertical: 16,
+    paddingVertical: 14,
     alignItems: 'center',
   },
   heroTextSection: {
@@ -671,25 +733,25 @@ const styles = StyleSheet.create({
     paddingRight: 6,
   },
   heroTitleNavy: {
+    fontFamily: FONT.bold,
     fontSize: 19,
-    fontWeight: '800',
     color: '#0E1E38',
     lineHeight: 23,
     letterSpacing: -0.3,
   },
   heroTitleTeal: {
+    fontFamily: FONT.bold,
     fontSize: 19,
-    fontWeight: '800',
     color: '#00D2B4',
     lineHeight: 24,
     letterSpacing: -0.3,
     marginBottom: 6,
   },
   heroSubtitle: {
-    fontSize: 11.5,
+    fontFamily: FONT.regular,
+    fontSize: 11,
     color: '#64748B',
-    lineHeight: 16,
-    fontWeight: '400',
+    lineHeight: 15.5,
   },
   heroImageSection: {
     flex: 1,
@@ -708,8 +770,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sectionTitle: {
-    fontSize: 16.5,
-    fontWeight: '800',
+    fontFamily: FONT.bold,
+    fontSize: 16,
     color: '#0E1E38',
     letterSpacing: -0.3,
   },
@@ -719,9 +781,9 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   viewAllText: {
-    fontSize: 12.5,
+    fontFamily: FONT.semiBold,
+    fontSize: 12,
     color: '#64748B',
-    fontWeight: '600',
   },
   durationListContainer: {
     paddingBottom: 4,
@@ -729,15 +791,15 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   durationPill: {
-    width: 65,
+    width: 64,
     height: 68,
-    borderRadius: 12,
+    borderRadius: 14,
     backgroundColor: '#F8FAFC',
     borderWidth: 1.2,
     borderColor: '#EBF0F5',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: 5,
   },
   durationPillSelected: {
     backgroundColor: '#FFFFFF',
@@ -753,7 +815,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#E6FAF6',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -761,13 +823,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#E6FAF6',
   },
   durationLabel: {
+    fontFamily: FONT.medium,
     fontSize: 11,
-    fontWeight: '600',
     color: '#64748B',
   },
   durationLabelSelected: {
+    fontFamily: FONT.semiBold,
     color: '#0E1E38',
-    fontWeight: '700',
   },
   locationCard: {
     backgroundColor: '#FFFFFF',
@@ -786,7 +848,7 @@ const styles = StyleSheet.create({
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: 9,
   },
   locationPinBadge: {
     width: 32,
@@ -800,16 +862,26 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   locationLabel: {
+    fontFamily: FONT.semiBold,
     fontSize: 12.5,
-    fontWeight: '700',
     color: '#0E1E38',
-    marginBottom: 2,
+    marginBottom: 1,
+  },
+  dropLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 1,
+  },
+  optionalLabel: {
+    fontFamily: FONT.regular,
+    fontSize: 11.5,
+    color: '#64748B',
   },
   locationTextInput: {
-    fontSize: 13,
+    fontFamily: FONT.medium,
+    fontSize: 12.5,
     color: '#0E1E38',
     padding: 0,
-    fontWeight: '500',
   },
   locateButton: {
     padding: 6,
@@ -820,52 +892,58 @@ const styles = StyleSheet.create({
     marginLeft: 42,
   },
   bookButtonWrapper: {
-    borderRadius: 27,
+    borderRadius: 26,
     shadowColor: '#00D2B4',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.38,
-    shadowRadius: 12,
-    elevation: 6,
-    marginBottom: 24,
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 5,
+    marginBottom: 22,
   },
   bookButton: {
-    height: 52,
-    borderRadius: 26,
+    height: 50,
+    borderRadius: 25,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
   },
   bookButtonText: {
-    fontSize: 16.5,
-    fontWeight: '700',
+    fontFamily: FONT.bold,
+    fontSize: 16,
     color: '#072038',
   },
   featuresRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 4,
+    paddingHorizontal: 2,
     marginBottom: 24,
   },
   featureItem: {
     alignItems: 'center',
-    width: '23%',
+    flex: 1,
+  },
+  featureDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: '#EDF2F7',
   },
   featureIconBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     backgroundColor: '#E6FAF6',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 6,
+    marginBottom: 5,
   },
   featureTitle: {
-    fontSize: 11,
-    fontWeight: '600',
+    fontFamily: FONT.semiBold,
+    fontSize: 10.5,
     color: '#0E1E38',
     textAlign: 'center',
-    lineHeight: 14,
+    lineHeight: 13.5,
   },
   savedPlacesRow: {
     flexDirection: 'row',
@@ -890,7 +968,7 @@ const styles = StyleSheet.create({
   savedPlaceIconBadge: {
     width: 34,
     height: 34,
-    borderRadius: 17,
+    borderRadius: 12,
     backgroundColor: '#E6FAF6',
     alignItems: 'center',
     justifyContent: 'center',
@@ -900,12 +978,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   savedPlaceTitle: {
+    fontFamily: FONT.bold,
     fontSize: 13,
-    fontWeight: '700',
     color: '#0E1E38',
     marginBottom: 2,
   },
   savedPlaceAddress: {
+    fontFamily: FONT.regular,
     fontSize: 10.5,
     color: '#64748B',
     lineHeight: 13,
@@ -929,8 +1008,8 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   bookingCarThumbnailWrapper: {
-    width: 60,
-    height: 44,
+    width: 58,
+    height: 42,
     backgroundColor: '#F8FAFC',
     borderRadius: 8,
     alignItems: 'center',
@@ -939,20 +1018,21 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   bookingCarThumbnail: {
-    width: '90%',
-    height: '90%',
+    width: '95%',
+    height: '95%',
   },
   bookingMiddleDetails: {
     flex: 1.1,
   },
   bookingDateText: {
+    fontFamily: FONT.bold,
     fontSize: 12,
-    fontWeight: '700',
     color: '#0E1E38',
     marginBottom: 2,
   },
   bookingDurationText: {
-    fontSize: 11,
+    fontFamily: FONT.regular,
+    fontSize: 10.5,
     color: '#64748B',
     marginBottom: 4,
   },
@@ -964,11 +1044,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
-    gap: 3,
+    gap: 4,
+  },
+  completedGreenDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: '#10B981',
   },
   completedBadgeText: {
+    fontFamily: FONT.semiBold,
     fontSize: 10,
-    fontWeight: '700',
     color: '#10B981',
   },
   bookingRouteContainer: {
@@ -986,43 +1072,45 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   timelineText: {
+    fontFamily: FONT.medium,
     fontSize: 10.5,
     color: '#0E1E38',
-    fontWeight: '500',
   },
   timelineLine: {
     width: 1.5,
-    height: 10,
+    height: 8,
     backgroundColor: '#CBD5E1',
     marginLeft: 2.25,
-    marginVertical: 2,
+    marginVertical: 1,
   },
   bookingArrow: {
     marginLeft: 6,
   },
-  bottomTabBar: {
+  bottomTabBarContainer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    height: 68,
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-    paddingBottom: Platform.OS === 'ios' ? 14 : 4,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: -3 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 8,
   },
+  bottomTabBar: {
+    height: 60,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    paddingTop: 4,
+  },
   tabItem: {
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 3,
+    gap: 2,
   },
   tabActivePill: {
     paddingHorizontal: 16,
@@ -1033,12 +1121,23 @@ const styles = StyleSheet.create({
     backgroundColor: '#E6FAF6',
   },
   tabLabel: {
-    fontSize: 10.5,
-    fontWeight: '500',
+    fontFamily: FONT.medium,
+    fontSize: 10,
     color: '#94A3B8',
   },
   tabLabelActive: {
+    fontFamily: FONT.bold,
     color: '#00D2B4',
-    fontWeight: '700',
+  },
+  homeIndicatorWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6,
+  },
+  homeIndicator: {
+    width: 134,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: '#000000',
   },
 });
