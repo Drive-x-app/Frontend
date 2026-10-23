@@ -171,29 +171,27 @@ export default function CustomerHomeScreen() {
           >
             {/* 1. Hero Promo Banner */}
             <View style={styles.heroBanner}>
+              {/* Composite Image showing white sedan & chauffeur on the right */}
+              <Image
+                source={require('../../assets/home_hero_driver.jpg')}
+                style={StyleSheet.absoluteFill}
+                resizeMode="cover"
+              />
+              {/* Soft Gradient Overlay: solid soft blue behind text on left, fading to transparent on right */}
               <LinearGradient
-                colors={['#EDF5FE', '#E4F0FD']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.heroGradient}
-              >
-                <View style={styles.heroTextSection}>
-                  <Text style={styles.heroTitleNavy}>Professional</Text>
-                  <Text style={styles.heroTitleNavy}>Drivers,</Text>
-                  <Text style={styles.heroTitleTeal}>On Your Time</Text>
-                  <Text style={styles.heroSubtitle}>
-                    Safe, reliable and convenient driver service for any duration.
-                  </Text>
-                </View>
-
-                <View style={styles.heroImageSection}>
-                  <Image
-                    source={require('../../assets/home_hero_driver.jpg')}
-                    style={styles.heroDriverImage}
-                    resizeMode="cover"
-                  />
-                </View>
-              </LinearGradient>
+                colors={['#EDF5FE', 'rgba(237, 245, 254, 0.95)', 'rgba(237, 245, 254, 0.7)', 'rgba(237, 245, 254, 0)']}
+                start={{ x: 0.3, y: 0 }}
+                end={{ x: 0.65, y: 0 }}
+                style={StyleSheet.absoluteFill}
+              />
+              <View style={styles.heroTextSection}>
+                <Text style={styles.heroTitleNavy}>Professional</Text>
+                <Text style={styles.heroTitleNavy}>Drivers,</Text>
+                <Text style={styles.heroTitleTeal}>On Your Time</Text>
+                <Text style={styles.heroSubtitle}>
+                  Safe, reliable and convenient{'\n'}driver service for any duration.
+                </Text>
+              </View>
             </View>
 
             {/* 2. Book a Driver Duration Section */}
@@ -715,53 +713,43 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     overflow: 'hidden',
     marginBottom: 20,
+    height: 146,
+    position: 'relative',
+    backgroundColor: '#EDF5FE',
     shadowColor: '#00D2B4',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 10,
     elevation: 3,
   },
-  heroGradient: {
-    flexDirection: 'row',
-    paddingLeft: 18,
-    paddingRight: 6,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
   heroTextSection: {
-    flex: 1.25,
-    paddingRight: 6,
+    width: '56%',
+    paddingLeft: 18,
+    paddingVertical: 14,
+    justifyContent: 'center',
+    height: '100%',
+    zIndex: 2,
   },
   heroTitleNavy: {
     fontFamily: FONT.bold,
-    fontSize: 19,
+    fontSize: 18.5,
     color: '#0E1E38',
-    lineHeight: 23,
+    lineHeight: 22,
     letterSpacing: -0.3,
   },
   heroTitleTeal: {
     fontFamily: FONT.bold,
-    fontSize: 19,
+    fontSize: 18.5,
     color: '#00D2B4',
-    lineHeight: 24,
+    lineHeight: 23,
     letterSpacing: -0.3,
-    marginBottom: 6,
+    marginBottom: 5,
   },
   heroSubtitle: {
     fontFamily: FONT.regular,
-    fontSize: 11,
+    fontSize: 10.5,
     color: '#64748B',
-    lineHeight: 15.5,
-  },
-  heroImageSection: {
-    flex: 1,
-    height: 125,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  heroDriverImage: {
-    width: '100%',
-    height: '100%',
+    lineHeight: 14.5,
   },
   sectionHeaderRow: {
     flexDirection: 'row',
