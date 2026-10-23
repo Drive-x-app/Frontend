@@ -111,7 +111,7 @@ export default function ChoosePaymentScreen() {
 
   const handlePay = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
-    // Proceed to payment gateway or success confirmation
+    router.push('/(customer)/booking-confirmed');
   };
 
   const desktopFrameHeight = isDesktopOrTablet ? Math.min(windowHeight - 24, 880) : '100%';
