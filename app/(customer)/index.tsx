@@ -178,29 +178,13 @@ export default function CustomerHomeScreen() {
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
           >
-            {/* 1. Hero Promo Banner */}
+            {/* 1. Hero Promo Banner (Using exact user-provided asset) */}
             <View style={styles.heroBanner}>
-              {/* Exact user-provided hero banner image */}
               <Image
                 source={require('../../assets/Home hero.png')}
-                style={StyleSheet.absoluteFill}
-                resizeMode="cover"
+                style={styles.heroImage}
+                resizeMode="contain"
               />
-              {/* Soft Gradient Overlay: solid soft blue behind text on left, fading to transparent on right */}
-              <LinearGradient
-                colors={['#EDF5FE', 'rgba(237, 245, 254, 0.95)', 'rgba(237, 245, 254, 0.7)', 'rgba(237, 245, 254, 0)']}
-                start={{ x: 0.3, y: 0 }}
-                end={{ x: 0.65, y: 0 }}
-                style={StyleSheet.absoluteFill}
-              />
-              <View style={styles.heroTextSection}>
-                <Text style={styles.heroTitleNavy}>Professional</Text>
-                <Text style={styles.heroTitleNavy}>Drivers,</Text>
-                <Text style={styles.heroTitleTeal}>On Your Time</Text>
-                <Text style={styles.heroSubtitle}>
-                  Safe, reliable and convenient{'\n'}driver service for any duration.
-                </Text>
-              </View>
             </View>
 
             {/* 2. Book a Driver Duration Section */}
@@ -727,11 +711,11 @@ const styles = StyleSheet.create({
     paddingTop: 4,
   },
   heroBanner: {
+    width: '100%',
+    aspectRatio: 783 / 273,
     borderRadius: 18,
     overflow: 'hidden',
     marginBottom: 20,
-    height: 146,
-    position: 'relative',
     backgroundColor: '#EDF5FE',
     shadowColor: '#00D2B4',
     shadowOffset: { width: 0, height: 4 },
@@ -739,34 +723,9 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 3,
   },
-  heroTextSection: {
-    width: '56%',
-    paddingLeft: 18,
-    paddingVertical: 14,
-    justifyContent: 'center',
+  heroImage: {
+    width: '100%',
     height: '100%',
-    zIndex: 2,
-  },
-  heroTitleNavy: {
-    fontFamily: FONT.bold,
-    fontSize: 18.5,
-    color: '#0E1E38',
-    lineHeight: 22,
-    letterSpacing: -0.3,
-  },
-  heroTitleTeal: {
-    fontFamily: FONT.bold,
-    fontSize: 18.5,
-    color: '#00D2B4',
-    lineHeight: 23,
-    letterSpacing: -0.3,
-    marginBottom: 5,
-  },
-  heroSubtitle: {
-    fontFamily: FONT.regular,
-    fontSize: 10.5,
-    color: '#64748B',
-    lineHeight: 14.5,
   },
   sectionHeaderRow: {
     flexDirection: 'row',
