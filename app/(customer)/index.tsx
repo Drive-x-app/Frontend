@@ -28,6 +28,8 @@ import {
   Headphones,
   Home as HomeIcon,
   Briefcase,
+  Users,
+  Star,
   MoreVertical,
   History,
   User,
@@ -93,6 +95,15 @@ export default function CustomerHomeScreen() {
     if (id === 'fullday') return <Sun size={iconSize} color={iconColor} strokeWidth={2.4} />;
     if (id === '1week') return <Calendar size={iconSize} color={iconColor} strokeWidth={2.2} />;
     return <Clock size={iconSize} color={iconColor} strokeWidth={2.4} />;
+  };
+
+  const renderSavedPlaceIcon = (type: SavedPlace['type']) => {
+    const iconSize = 18;
+    const iconColor = '#00D2B4';
+    if (type === 'home') return <HomeIcon size={iconSize} color={iconColor} strokeWidth={2.2} />;
+    if (type === 'office') return <Briefcase size={iconSize} color={iconColor} strokeWidth={2.2} />;
+    if (type === 'parents') return <Users size={iconSize} color={iconColor} strokeWidth={2.2} />;
+    return <Star size={iconSize} color={iconColor} strokeWidth={2.2} />;
   };
 
   const desktopFrameHeight = isDesktopOrTablet ? Math.min(windowHeight - 24, 880) : '100%';
@@ -372,7 +383,11 @@ export default function CustomerHomeScreen() {
               </TouchableOpacity>
             </View>
 
-            <View style={styles.savedPlacesRow}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.savedPlacesScrollContainer}
+            >
               {savedPlaces.map((place: SavedPlace) => (
                 <TouchableOpacity
                   key={place.id}
@@ -384,29 +399,18 @@ export default function CustomerHomeScreen() {
                   }}
                 >
                   <View style={styles.savedPlaceIconBadge}>
-                    {place.type === 'home' ? (
-                      <HomeIcon size={18} color="#00D2B4" strokeWidth={2.2} />
-                    ) : (
-                      <Briefcase size={18} color="#00D2B4" strokeWidth={2.2} />
-                    )}
+                    {renderSavedPlaceIcon(place.type)}
                   </View>
 
-                  <View style={styles.savedPlaceContent}>
-                    <Text style={styles.savedPlaceTitle}>{place.title}</Text>
-                    <Text style={styles.savedPlaceAddress} numberOfLines={2}>
-                      {place.address}
-                    </Text>
-                  </View>
-
-                  <TouchableOpacity
-                    style={styles.savedPlaceOptionsButton}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  >
-                    <MoreVertical size={16} color="#94A3B8" />
-                  </TouchableOpacity>
+                  <Text style={styles.savedPlaceTitle} numberOfLines={1}>
+                    {place.title}
+                  </Text>
+                  <Text style={styles.savedPlaceAddress} numberOfLines={2}>
+                    {place.address}
+                  </Text>
                 </TouchableOpacity>
               ))}
-            </View>
+            </ScrollView>
 
             {/* 7. Recent Bookings Section */}
             <View style={styles.sectionHeaderRow}>
@@ -913,52 +917,47 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 13.5,
   },
-  savedPlacesRow: {
+  savedPlacesScrollContainer: {
     flexDirection: 'row',
-    gap: 12,
-    marginBottom: 24,
+    gap: 10,
+    paddingBottom: 4,
+    marginBottom: 20,
   },
   savedPlaceCard: {
-    flex: 1,
+    width: 118,
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
     borderWidth: 1.2,
     borderColor: '#E2E8F0',
     padding: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.03,
     shadowRadius: 4,
     elevation: 2,
+    flexShrink: 0,
   },
   savedPlaceIconBadge: {
-    width: 34,
-    height: 34,
+    width: 38,
+    height: 38,
     borderRadius: 12,
     backgroundColor: '#E6FAF6',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 8,
-  },
-  savedPlaceContent: {
-    flex: 1,
+    marginBottom: 8,
   },
   savedPlaceTitle: {
     fontFamily: FONT.bold,
-    fontSize: 13,
+    fontSize: 12.5,
     color: '#0E1E38',
     marginBottom: 2,
   },
   savedPlaceAddress: {
     fontFamily: FONT.regular,
-    fontSize: 10.5,
+    fontSize: 10,
     color: '#64748B',
     lineHeight: 13,
-  },
-  savedPlaceOptionsButton: {
-    paddingLeft: 4,
   },
   recentBookingCard: {
     backgroundColor: '#FFFFFF',
