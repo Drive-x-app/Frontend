@@ -56,7 +56,7 @@ export default function SelectDurationScreen() {
 
   const handleContinue = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-    // Next step in flow (e.g. driver matching / booking summary)
+    router.push('/(customer)/booking-summary');
   };
 
   const renderDurationIcon = (id: string, isSelected: boolean) => {
