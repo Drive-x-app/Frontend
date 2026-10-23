@@ -111,8 +111,8 @@ export default function BookingSummaryScreen() {
   };
 
   const handleConfirmBooking = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
-    // Proceed to driver search matching or confirmation
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    router.push('/(customer)/payment');
   };
 
   const desktopFrameHeight = isDesktopOrTablet ? Math.min(windowHeight - 24, 880) : '100%';
