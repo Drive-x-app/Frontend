@@ -69,10 +69,18 @@ export default function LoginScreen() {
     if (phoneNumber.trim().length < 10 || isLoading) {
       return;
     }
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      (document.activeElement as HTMLElement)?.blur?.();
+    }
+    inputRef.current?.blur?.();
+    Keyboard.dismiss();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     const result = await requestOtp();
     if (result.success) {
-      router.push('/(customer)');
+      if (Platform.OS === 'web' && typeof document !== 'undefined') {
+        (document.activeElement as HTMLElement)?.blur?.();
+      }
+      router.replace('/(customer)');
     }
   };
 
@@ -166,6 +174,9 @@ export default function LoginScreen() {
                   style={styles.countryPickerButton}
                   activeOpacity={0.7}
                   onPress={() => {
+                    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+                      (document.activeElement as HTMLElement)?.blur?.();
+                    }
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
                     setIsCountryModalVisible(true);
                   }}
@@ -304,6 +315,9 @@ export default function LoginScreen() {
                           ]}
                           activeOpacity={0.7}
                           onPress={() => {
+                            if (Platform.OS === 'web' && typeof document !== 'undefined') {
+                              (document.activeElement as HTMLElement)?.blur?.();
+                            }
                             setSelectedCountry(item);
                             setIsCountryModalVisible(false);
                             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
