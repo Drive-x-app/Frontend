@@ -565,6 +565,12 @@ const styles = StyleSheet.create({
     color: '#0E1E38',
     paddingVertical: 0,
     paddingHorizontal: 4,
+    ...(Platform.OS === 'web'
+      ? ({
+          outlineStyle: 'none',
+          outlineWidth: 0,
+        } as any)
+      : {}),
   },
   helperText: {
     fontFamily: FONT.regular,

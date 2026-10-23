@@ -854,6 +854,12 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     color: '#0E1E38',
     padding: 0,
+    ...(Platform.OS === 'web'
+      ? ({
+          outlineStyle: 'none',
+          outlineWidth: 0,
+        } as any)
+      : {}),
   },
   locateButton: {
     padding: 6,

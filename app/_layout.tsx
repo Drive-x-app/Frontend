@@ -25,7 +25,7 @@ export default function RootLayout() {
     Poppins: Poppins_400Regular,
   });
 
-  // Inject Google Fonts Poppins stylesheet on web
+  // Inject Google Fonts Poppins stylesheet and remove browser input focus outlines on web
   useEffect(() => {
     if (Platform.OS === 'web' && typeof document !== 'undefined') {
       const linkId = 'poppins-google-font';
@@ -36,6 +36,26 @@ export default function RootLayout() {
         link.href =
           'https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap';
         document.head.appendChild(link);
+      }
+
+      const styleId = 'global-input-no-outline';
+      if (!document.getElementById(styleId)) {
+        const style = document.createElement('style');
+        style.id = styleId;
+        style.textContent = `
+          input, textarea, select, [contenteditable] {
+            outline: none !important;
+            outline-style: none !important;
+            box-shadow: none !important;
+            -webkit-tap-highlight-color: transparent !important;
+          }
+          input:focus, textarea:focus, select:focus, [contenteditable]:focus {
+            outline: none !important;
+            outline-style: none !important;
+            box-shadow: none !important;
+          }
+        `;
+        document.head.appendChild(style);
       }
     }
   }, []);

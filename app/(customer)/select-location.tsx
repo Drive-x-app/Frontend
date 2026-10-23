@@ -777,6 +777,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#0E1E38',
     padding: 0,
+    ...(Platform.OS === 'web'
+      ? ({
+          outlineStyle: 'none',
+          outlineWidth: 0,
+        } as any)
+      : {}),
   },
   clearIconButton: {
     padding: 4,
