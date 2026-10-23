@@ -76,12 +76,18 @@ export interface BookingState {
   savedPlaces: SavedPlace[];
   recentPlaces: RecentPlace[];
   isBooking: boolean;
+  selectedDate: string;
+  selectedTime: string;
+  pickupTimingMode: 'now' | 'later';
 
   // Actions
   setSelectedDurationId: (id: string) => void;
   setPickupLocation: (location: string) => void;
   setDropLocation: (location: string) => void;
   setActiveTab: (tab: 'home' | 'bookings' | 'history' | 'profile') => void;
+  setSelectedDate: (date: string) => void;
+  setSelectedTime: (time: string) => void;
+  setPickupTimingMode: (mode: 'now' | 'later') => void;
   applySavedPlace: (place: SavedPlace) => void;
   applyRecentPlace: (place: RecentPlace) => void;
   clearRecentPlaces: () => void;
@@ -96,11 +102,17 @@ export const useBookingStore = create<BookingState>((set) => ({
   savedPlaces: INITIAL_SAVED_PLACES,
   recentPlaces: INITIAL_RECENT_PLACES,
   isBooking: false,
+  selectedDate: '2026-10-14',
+  selectedTime: '10:00 AM',
+  pickupTimingMode: 'later',
 
   setSelectedDurationId: (id: string) => set({ selectedDurationId: id }),
   setPickupLocation: (location: string) => set({ pickupLocation: location }),
   setDropLocation: (location: string) => set({ dropLocation: location }),
   setActiveTab: (activeTab: 'home' | 'bookings' | 'history' | 'profile') => set({ activeTab }),
+  setSelectedDate: (selectedDate: string) => set({ selectedDate }),
+  setSelectedTime: (selectedTime: string) => set({ selectedTime }),
+  setPickupTimingMode: (pickupTimingMode: 'now' | 'later') => set({ pickupTimingMode }),
   applySavedPlace: (place: SavedPlace) => {
     if (place.type !== 'other') {
       set({ pickupLocation: place.address });
@@ -113,6 +125,9 @@ export const useBookingStore = create<BookingState>((set) => ({
       selectedDurationId: '2h',
       pickupLocation: '123, Anna Nagar, Coimbatore',
       dropLocation: 'RS Puram, Coimbatore',
+      selectedDate: '2026-10-14',
+      selectedTime: '10:00 AM',
+      pickupTimingMode: 'later',
       isBooking: false,
     }),
 }));

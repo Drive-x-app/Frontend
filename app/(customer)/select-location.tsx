@@ -81,7 +81,7 @@ export default function SelectLocationScreen() {
 
   const handleContinue = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-    // Proceed to driver selection or confirmation
+    router.push('/(customer)/select-datetime');
   };
 
   const desktopFrameHeight = isDesktopOrTablet ? Math.min(windowHeight - 24, 880) : '100%';
