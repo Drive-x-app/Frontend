@@ -131,7 +131,7 @@ export default function SelectDateTimeScreen() {
 
   const handleContinue = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-    // Navigate to driver selection or booking review
+    router.push('/(customer)/select-duration');
   };
 
   // Generate calendar days for October 2026

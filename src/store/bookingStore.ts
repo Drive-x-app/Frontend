@@ -3,16 +3,17 @@ import { create } from 'zustand';
 export interface DurationOption {
   id: string;
   label: string;
+  description: string;
   hours: number;
 }
 
 export const DURATION_OPTIONS: DurationOption[] = [
-  { id: '1h', label: '1 Hour', hours: 1 },
-  { id: '2h', label: '2 Hours', hours: 2 },
-  { id: '4h', label: '4 Hours', hours: 4 },
-  { id: '6h', label: '6 Hours', hours: 6 },
-  { id: 'fullday', label: 'Full Day', hours: 12 },
-  { id: '1week', label: '1 Week', hours: 84 },
+  { id: '1h', label: '1 Hour', description: 'Short trips\nand quick travel', hours: 1 },
+  { id: '2h', label: '2 Hours', description: 'Meetings,\nshopping, personal\nwork', hours: 2 },
+  { id: '4h', label: '4 Hours', description: 'Multiple stops\nin the city', hours: 4 },
+  { id: '6h', label: '6 Hours', description: 'Business or\npersonal travel', hours: 6 },
+  { id: 'fullday', label: 'Full Day', description: 'Complete day\nwith a driver', hours: 12 },
+  { id: '1week', label: '1 Week', description: 'Long-term\nrequirement', hours: 168 },
 ];
 
 export interface SavedPlace {
