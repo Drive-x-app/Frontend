@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
   useWindowDimensions,
   Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import {
@@ -25,8 +25,9 @@ import {
   CreditCard,
   ChevronRight,
   ArrowRight,
-  Wifi,
-  Battery,
+  Navigation,
+  Car,
+  AlertCircle,
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
@@ -34,10 +35,33 @@ import {
   useBookingStore,
   DURATION_OPTIONS,
 } from '../../src/store/bookingStore';
+import { DesktopHeader } from '../../src/components/common/DesktopHeader';
+import { DesktopSidebar } from '../../src/components/common/DesktopSidebar';
 import { FONT } from '../../src/theme/typography';
+import { getTodayDateKey } from '../../src/utils/dateTime';
+
+/**
+ * Decorative 6x6 dot matrix pattern component matching desktop reference design
+ */
+const DotGrid = () => {
+  const rows = [0, 1, 2, 3, 4, 5];
+  const cols = [0, 1, 2, 3, 4, 5];
+  return (
+    <View style={styles.dotGridContainer}>
+      {rows.map((r) => (
+        <View key={r} style={styles.dotGridRow}>
+          {cols.map((c) => (
+            <View key={c} style={styles.dotGridDot} />
+          ))}
+        </View>
+      ))}
+    </View>
+  );
+};
 
 export default function BookingSummaryScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const isDesktopOrTablet = windowWidth > 600;
 
@@ -47,20 +71,25 @@ export default function BookingSummaryScreen() {
   const selectedDurationId = useBookingStore((state) => state.selectedDurationId);
   const selectedDate = useBookingStore((state) => state.selectedDate);
   const selectedTime = useBookingStore((state) => state.selectedTime);
+  const pickupTimingMode = useBookingStore((state) => state.pickupTimingMode);
+  const estimatedDistanceKm = useBookingStore((state) => state.estimatedDistanceKm);
+  const estimatedDurationMinutes = useBookingStore((state) => state.estimatedDurationMinutes);
+
+  const isNavigatingRef = useRef(false);
 
   const selectedDuration =
     DURATION_OPTIONS.find((d) => d.id === selectedDurationId) ||
-    DURATION_OPTIONS[2]; // Default 4 hours if not matched
+    DURATION_OPTIONS[0]; // Default 1 hour
 
   const hourlyRate = 300;
-  const durationHours = selectedDuration?.hours || 4;
+  const durationHours = selectedDuration?.hours || 1;
   const estimatedFare = durationHours * hourlyRate;
 
-  // Format Date string: "2026-10-14" -> "Tue, 14 Oct 2026"
+  // Format Date string: "YYYY-MM-DD" -> "Thu, 29 Oct 2026"
   const formatDisplayDate = (dateStr: string) => {
     try {
-      if (!dateStr || !dateStr.includes('-')) return 'Tue, 14 Oct 2026';
-      const parts = dateStr.split('-');
+      const targetStr = dateStr && dateStr.includes('-') ? dateStr : getTodayDateKey();
+      const parts = targetStr.split('-');
       const year = parseInt(parts[0], 10);
       const month = parseInt(parts[1], 10) - 1;
       const day = parseInt(parts[2], 10);
@@ -82,7 +111,7 @@ export default function BookingSummaryScreen() {
       ];
       return `${dayNames[dateObj.getDay()]}, ${day} ${monthNames[month]} ${year}`;
     } catch {
-      return 'Tue, 14 Oct 2026';
+      return 'Today';
     }
   };
 
@@ -111,43 +140,274 @@ export default function BookingSummaryScreen() {
   };
 
   const handleConfirmBooking = () => {
+    if (isNavigatingRef.current) return;
+    isNavigatingRef.current = true;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     router.push('/(customer)/payment');
+
+    setTimeout(() => {
+      isNavigatingRef.current = false;
+    }, 1000);
   };
 
-  const desktopFrameHeight = isDesktopOrTablet ? Math.min(windowHeight - 24, 880) : '100%';
+  // =========================================================================
+  // DESKTOP & TABLET VIEW (Matching Reference Mockup Exactly)
+  // =========================================================================
+  if (isDesktopOrTablet) {
+    return (
+      <View style={styles.desktopOuterContainer}>
+        <StatusBar style="dark" />
+        {/* Top Header */}
+        <DesktopHeader activeTab="home" />
 
+        <View style={styles.desktopBodyRow}>
+          {/* Left Persistent Navigation Sidebar */}
+          <DesktopSidebar activeTab="home" />
+
+          {/* Main Content Area */}
+          <View style={styles.desktopContentArea}>
+            {/* Decorative Matrix Dots */}
+            <View style={styles.topRightDots} pointerEvents="none">
+              <DotGrid />
+            </View>
+            <View style={styles.bottomRightDots} pointerEvents="none">
+              <DotGrid />
+            </View>
+
+            <ScrollView
+              style={styles.desktopScroll}
+              contentContainerStyle={styles.desktopScrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.desktopMainCard}>
+                {/* 1. Header Row: Title & Subtitle */}
+                <View style={styles.dtCardHeaderRow}>
+                  <View style={styles.dtTitleColumn}>
+                    <Text style={styles.dtPageTitle}>Booking Summary</Text>
+                    <Text style={styles.dtPageSubtitle}>
+                      Review your booking details and confirm.
+                    </Text>
+                  </View>
+                </View>
+
+                {/* 2. Trip Locations Card */}
+                <View style={styles.dtLocationsCard}>
+                  <View style={styles.dtCardTopHeader}>
+                    <View style={styles.dtCardTitleWithIcon}>
+                      <View style={styles.dtIconCircleBlue}>
+                        <MapPin size={17} color="#0284C7" strokeWidth={2.4} />
+                      </View>
+                      <Text style={styles.dtSectionCardTitle}>Trip Locations</Text>
+                    </View>
+
+                    <TouchableOpacity
+                      style={styles.dtEditPillBtn}
+                      activeOpacity={0.75}
+                      onPress={handleEditLocations}
+                    >
+                      <Pencil size={13} color="#0284C7" strokeWidth={2.4} />
+                      <Text style={styles.dtEditPillText}>Edit</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.dtLocationsSplitRow}>
+                    {/* Left: Pickup & Drop Points */}
+                    <View style={styles.dtLocationDetailsColumn}>
+                      {/* Pickup */}
+                      <View style={styles.dtLocationPointRow}>
+                        <View style={styles.dtMarkerDotGreen} />
+                        <View style={styles.dtLocationTextWrap}>
+                          <Text style={styles.dtMicroLabel}>Pickup Location</Text>
+                          <Text style={styles.dtAddressTitle} numberOfLines={1}>
+                            {pickupLocation || 'Pickup not specified'}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {/* Dotted Connecting Line */}
+                      <View style={styles.dtDottedLineContainer}>
+                        <View style={styles.dtDottedSegment} />
+                        <View style={styles.dtDottedSegment} />
+                      </View>
+
+                      {/* Drop */}
+                      <View style={styles.dtLocationPointRow}>
+                        <View style={styles.dtMarkerDotRed} />
+                        <View style={styles.dtLocationTextWrap}>
+                          <Text style={styles.dtMicroLabel}>Drop Location (Optional)</Text>
+                          <Text style={styles.dtAddressTitle} numberOfLines={1}>
+                            {dropLocation || 'Not specified (Driver on hourly rental)'}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {/* Distance & Route Metrics Banner */}
+                      <View style={styles.dtRouteMetricsBanner}>
+                        <Navigation size={14} color="#00A892" strokeWidth={2.4} />
+                        <Text style={styles.dtRouteMetricsText}>
+                          {estimatedDistanceKm
+                            ? `${estimatedDistanceKm.toFixed(2)} km road distance • ~${estimatedDurationMinutes || 1} mins estimated route`
+                            : 'Flexible route • As directed by customer'}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Right: Map Thumbnail View */}
+                    <TouchableOpacity
+                      style={styles.dtMapThumbnailContainer}
+                      activeOpacity={0.85}
+                      onPress={handleEditLocations}
+                    >
+                      <Image
+                        source={require('../../assets/trip_route_thumb.jpg')}
+                        style={styles.dtMapThumbnailImage}
+                        resizeMode="cover"
+                      />
+                      <View style={styles.dtViewMapOverlayPill}>
+                        <Map size={14} color="#0284C7" strokeWidth={2.2} />
+                        <Text style={styles.dtViewMapOverlayText}>View on Map</Text>
+                      </View>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* 3. Three Metrics Cards Row (Duration, Date & Time, Estimated Fare) */}
+                <View style={styles.dtThreeCardsRow}>
+                  {/* Card 1: Duration */}
+                  <View style={styles.dtSummaryTile}>
+                    <View style={styles.dtTileHeaderRow}>
+                      <View style={styles.dtTileIconLabel}>
+                        <View style={styles.dtIconCircleBlue}>
+                          <Clock size={16} color="#0284C7" strokeWidth={2.4} />
+                        </View>
+                        <Text style={styles.dtTileLabel}>Duration</Text>
+                      </View>
+                      <TouchableOpacity
+                        style={styles.dtMiniEditBtn}
+                        activeOpacity={0.7}
+                        onPress={handleEditDuration}
+                      >
+                        <Pencil size={12} color="#0284C7" strokeWidth={2.4} />
+                        <Text style={styles.dtMiniEditText}>Edit</Text>
+                      </TouchableOpacity>
+                    </View>
+                    <Text style={styles.dtTilePrimaryValue}>{selectedDuration.label}</Text>
+                    <Text style={styles.dtTileSecondaryDesc} numberOfLines={2}>
+                      {selectedDuration.description.replace(/\n/g, ' ')}
+                    </Text>
+                  </View>
+
+                  {/* Card 2: Date & Time */}
+                  <View style={styles.dtSummaryTile}>
+                    <View style={styles.dtTileHeaderRow}>
+                      <View style={styles.dtTileIconLabel}>
+                        <View style={styles.dtIconCircleGreen}>
+                          <Calendar size={16} color="#00A892" strokeWidth={2.4} />
+                        </View>
+                        <Text style={styles.dtTileLabel}>Date & Time</Text>
+                      </View>
+                      <TouchableOpacity
+                        style={styles.dtMiniEditBtn}
+                        activeOpacity={0.7}
+                        onPress={handleEditDateTime}
+                      >
+                        <Pencil size={12} color="#0284C7" strokeWidth={2.4} />
+                        <Text style={styles.dtMiniEditText}>Edit</Text>
+                      </TouchableOpacity>
+                    </View>
+                    <Text style={styles.dtTilePrimaryValue}>
+                      {formatDisplayDate(selectedDate)}
+                    </Text>
+                    <View style={styles.dtTimeRowInsideTile}>
+                      <Clock size={13} color="#64748B" strokeWidth={2.2} />
+                      <Text style={styles.dtTimeValueInsideTile}>
+                        {pickupTimingMode === 'now' ? 'Now (Immediate)' : selectedTime || '04:00 PM'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Card 3: Estimated Fare */}
+                  <View style={styles.dtSummaryTile}>
+                    <View style={styles.dtTileHeaderRow}>
+                      <View style={styles.dtTileIconLabel}>
+                        <View style={styles.dtIconCircleTeal}>
+                          <CircleDollarSign size={16} color="#00A892" strokeWidth={2.4} />
+                        </View>
+                        <Text style={styles.dtTileLabel}>Estimated Fare</Text>
+                      </View>
+                    </View>
+                    <View style={styles.dtFareValueRow}>
+                      <Text style={styles.dtFareLargeText}>₹ {estimatedFare}</Text>
+                      <View style={styles.dtInfoCircleSmall}>
+                        <Info size={13} color="#64748B" strokeWidth={2.2} />
+                      </View>
+                    </View>
+                    <Text style={styles.dtFareBreakdownSubtext}>
+                      (₹ {hourlyRate} per hour × {durationHours} hour{durationHours > 1 ? 's' : ''})
+                    </Text>
+                    <Text style={styles.dtFareDisclaimerText}>
+                      Final amount may vary based on distance, stops and actual usage.
+                    </Text>
+                  </View>
+                </View>
+
+                {/* 4. Booking Includes Card */}
+                <View style={styles.dtIncludesCard}>
+                  <View style={styles.dtIncludesHeaderRow}>
+                    <View style={styles.dtIconCircleTeal}>
+                      <Car size={16} color="#00A892" strokeWidth={2.4} />
+                    </View>
+                    <Text style={styles.dtIncludesTitle}>Booking Includes</Text>
+                  </View>
+
+                  <View style={styles.dtIncludesList}>
+                    <View style={styles.dtIncludeItemRow}>
+                      <Check size={14} color="#00D2B4" strokeWidth={2.6} />
+                      <Text style={styles.dtIncludeItemText}>Professional driver service</Text>
+                    </View>
+                    <View style={styles.dtIncludeItemRow}>
+                      <Check size={14} color="#00D2B4" strokeWidth={2.6} />
+                      <Text style={styles.dtIncludeItemText}>Selected booking duration</Text>
+                    </View>
+                    <View style={styles.dtIncludeItemRow}>
+                      <Check size={14} color="#00D2B4" strokeWidth={2.6} />
+                      <Text style={styles.dtIncludeItemText}>Pickup at the selected location</Text>
+                    </View>
+                    <View style={styles.dtIncludeItemRow}>
+                      <Check size={14} color="#00D2B4" strokeWidth={2.6} />
+                      <Text style={styles.dtIncludeItemText}>Optional drop location, if provided</Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* 5. Bottom Action Button */}
+                <TouchableOpacity
+                  style={styles.dtConfirmButton}
+                  activeOpacity={0.88}
+                  onPress={handleConfirmBooking}
+                  accessibilityLabel="Proceed to payment"
+                >
+                  <Text style={styles.dtConfirmButtonText}>Proceed to Payment</Text>
+                  <ArrowRight size={18} color="#FFFFFF" strokeWidth={2.4} />
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  // =========================================================================
+  // MOBILE APP VIEW
+  // =========================================================================
   return (
     <View style={styles.outerContainer}>
       <StatusBar style="dark" />
 
       {/* Responsive App Frame */}
-      <View
-        style={[
-          styles.appFrame,
-          isDesktopOrTablet
-            ? [styles.appFrameDesktop, { height: desktopFrameHeight }]
-            : { height: '100%', flex: 1 },
-        ]}
-      >
+      <View style={{ height: '100%', flex: 1, backgroundColor: '#FFFFFF' }}>
         <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-          {/* Simulated iOS Status Bar on Desktop/Web for exact design replication */}
-          {isDesktopOrTablet && (
-            <View style={styles.simulatedStatusBar}>
-              <Text style={styles.simulatedStatusTime}>9:41</Text>
-              <View style={styles.simulatedStatusIcons}>
-                <View style={styles.cellularBars}>
-                  <View style={[styles.cellularBar, { height: 4 }]} />
-                  <View style={[styles.cellularBar, { height: 6 }]} />
-                  <View style={[styles.cellularBar, { height: 8 }]} />
-                  <View style={[styles.cellularBar, { height: 10 }]} />
-                </View>
-                <Wifi size={14} color="#0E1E38" strokeWidth={2.2} />
-                <Battery size={16} color="#0E1E38" strokeWidth={2.2} />
-              </View>
-            </View>
-          )}
-
           {/* Top Header: Back Button & Centered Logo */}
           <View style={styles.topHeaderBar}>
             <TouchableOpacity
@@ -178,287 +438,211 @@ export default function BookingSummaryScreen() {
           {/* Title Header */}
           <View style={styles.titleSection}>
             <Text style={styles.pageTitle}>Booking Summary</Text>
-            <Text style={styles.pageSubtitle}>
-              Review your booking details and confirm.
-            </Text>
+            <Text style={styles.pageSubtitle}>Review and confirm your driver details</Text>
           </View>
 
-          {/* Scrollable Content */}
+          {/* Scrollable Summary Cards */}
           <ScrollView
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
           >
             {/* 1. Trip Locations Card */}
-            <View style={styles.cardContainer}>
+            <View style={styles.sectionCard}>
               <View style={styles.cardHeaderRow}>
-                <Text style={styles.cardHeaderTitle}>Trip Locations</Text>
+                <View style={styles.cardHeaderLeft}>
+                  <MapPin size={17} color="#0E1E38" strokeWidth={2.2} />
+                  <Text style={styles.cardTitle}>Trip Locations</Text>
+                </View>
                 <TouchableOpacity
-                  style={styles.editPillButton}
-                  activeOpacity={0.75}
+                  style={styles.editButton}
+                  activeOpacity={0.7}
                   onPress={handleEditLocations}
+                  accessibilityLabel="Edit pickup and drop locations"
                 >
-                  <Pencil size={11} color="#0284C7" strokeWidth={2.2} />
-                  <Text style={styles.editPillText}>Edit</Text>
+                  <Pencil size={13} color="#00D2B4" strokeWidth={2.4} />
+                  <Text style={styles.editText}>Edit</Text>
                 </TouchableOpacity>
               </View>
 
-              <View style={styles.tripLocationsBody}>
-                {/* Left Locations Column */}
-                <View style={styles.timelineColumn}>
-                  {/* Pickup Row */}
-                  <View style={styles.locationTimelineRow}>
-                    <View style={styles.locationPinCircleTeal}>
-                      <MapPin size={13} color="#00D2B4" fill="#00D2B4" strokeWidth={1} />
-                    </View>
-                    <View style={styles.locationTextWrapper}>
-                      <Text style={styles.locationMicroLabel}>Pickup Location</Text>
-                      <Text style={styles.locationAddressText} numberOfLines={2}>
-                        {pickupLocation || '123, Anna Nagar, Coimbatore'}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {/* Vertical Dotted Connector */}
-                  <View style={styles.dottedConnectorContainer}>
-                    <View style={styles.dottedDot} />
-                    <View style={styles.dottedDot} />
-                    <View style={styles.dottedDot} />
-                  </View>
-
-                  {/* Drop Row */}
-                  <View style={styles.locationTimelineRow}>
-                    <View style={styles.locationPinCircleRed}>
-                      <MapPin size={13} color="#EF4444" fill="#EF4444" strokeWidth={1} />
-                    </View>
-                    <View style={styles.locationTextWrapper}>
-                      <Text style={styles.locationMicroLabel}>
-                        Drop Location (Optional)
-                      </Text>
-                      <Text style={styles.locationAddressText} numberOfLines={2}>
-                        {dropLocation || 'RS Puram, Coimbatore'}
-                      </Text>
-                    </View>
+              <View style={styles.locationContainer}>
+                {/* Pickup Point */}
+                <View style={styles.pointRow}>
+                  <View style={styles.dotPickup} />
+                  <View style={styles.addressWrap}>
+                    <Text style={styles.microLabel}>Pickup Location</Text>
+                    <Text style={styles.addressText} numberOfLines={1}>
+                      {pickupLocation}
+                    </Text>
                   </View>
                 </View>
 
-                {/* Right Mini Map Thumbnail */}
-                <View style={styles.miniMapWrapper}>
-                  <Image
-                    source={require('../../assets/trip_route_thumb.jpg')}
-                    style={styles.miniMapImage}
-                    resizeMode="cover"
-                  />
-                  <TouchableOpacity
-                    style={styles.viewOnMapButton}
-                    activeOpacity={0.85}
-                    onPress={handleEditLocations}
-                  >
-                    <Map size={11} color="#0284C7" strokeWidth={2.2} />
-                    <Text style={styles.viewOnMapText}>View on Map</Text>
-                  </TouchableOpacity>
+                {/* Connecting Dotted Line */}
+                <View style={styles.dottedLineContainer}>
+                  <View style={styles.dotSegment} />
+                  <View style={styles.dotSegment} />
+                  <View style={styles.dotSegment} />
+                </View>
+
+                {/* Drop Point */}
+                <View style={styles.pointRow}>
+                  <View style={styles.dotDrop} />
+                  <View style={styles.addressWrap}>
+                    <Text style={styles.microLabel}>Drop Location (Optional)</Text>
+                    <Text style={styles.addressText} numberOfLines={1}>
+                      {dropLocation || 'Not specified (Driver on hourly rental)'}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Distance & Route Metrics Banner */}
+              <View style={styles.routeMetricsRow}>
+                <View style={styles.metricItem}>
+                  <Navigation size={14} color="#00D2B4" strokeWidth={2.4} />
+                  <Text style={styles.metricLabel}>
+                    {estimatedDistanceKm ? `${estimatedDistanceKm.toFixed(1)} km road distance` : 'Flexible route'}
+                  </Text>
+                </View>
+                <View style={styles.metricItem}>
+                  <Clock size={14} color="#64748B" strokeWidth={2.2} />
+                  <Text style={styles.metricLabel}>
+                    {estimatedDurationMinutes
+                      ? `~${estimatedDurationMinutes} mins estimated route`
+                      : 'Hourly driver rental'}
+                  </Text>
                 </View>
               </View>
             </View>
 
-            {/* 2. Duration Card & Date & Time Card Row */}
-            <View style={styles.twoColumnRow}>
-              {/* Duration Card */}
-              <View style={[styles.cardContainer, styles.halfColumnCard]}>
-                <View style={styles.cardHeaderRow}>
-                  <View style={styles.iconTitleRow}>
-                    <Clock size={15} color="#0E1E38" strokeWidth={2.2} />
-                    <Text style={styles.cardHeaderTitleSmall}>Duration</Text>
-                  </View>
-                  <TouchableOpacity
-                    style={styles.editPillButton}
-                    activeOpacity={0.75}
-                    onPress={handleEditDuration}
-                  >
-                    <Pencil size={11} color="#0284C7" strokeWidth={2.2} />
-                    <Text style={styles.editPillText}>Edit</Text>
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.cardInnerContent}>
-                  <Text style={styles.highlightBoldText}>
-                    {selectedDuration?.label || '4 Hours'}
-                  </Text>
-                  <Text style={styles.subtextSmall}>
-                    {selectedDuration?.description?.replace('\n', ' ') ||
-                      'Multiple stops in the city'}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Date & Time Card */}
-              <View style={[styles.cardContainer, styles.halfColumnCard]}>
-                <View style={styles.cardHeaderRow}>
-                  <View style={styles.iconTitleRow}>
-                    <Calendar size={15} color="#0E1E38" strokeWidth={2.2} />
-                    <Text style={styles.cardHeaderTitleSmall}>Date & Time</Text>
-                  </View>
-                  <TouchableOpacity
-                    style={styles.editPillButton}
-                    activeOpacity={0.75}
-                    onPress={handleEditDateTime}
-                  >
-                    <Pencil size={11} color="#0284C7" strokeWidth={2.2} />
-                    <Text style={styles.editPillText}>Edit</Text>
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.dateTimeLines}>
-                  <View style={styles.dateTimeLine}>
-                    <Calendar size={13} color="#00D2B4" strokeWidth={2.2} />
-                    <Text style={styles.dateTimeValueText}>
-                      {formatDisplayDate(selectedDate)}
-                    </Text>
-                  </View>
-
-                  <View style={styles.dateTimeLine}>
-                    <Clock size={13} color="#64748B" strokeWidth={2.2} />
-                    <Text style={styles.dateTimeValueText}>
-                      {selectedTime || '10:00 AM'}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            </View>
-
-            {/* 3. Estimated Fare & Booking Includes Row */}
-            <View style={styles.twoColumnRow}>
-              {/* Estimated Fare Card */}
-              <View style={[styles.cardContainer, styles.halfColumnCard]}>
-                <View style={styles.cardHeaderRow}>
-                  <View style={styles.iconTitleRow}>
-                    <CircleDollarSign size={15} color="#0E1E38" strokeWidth={2.2} />
-                    <Text style={styles.cardHeaderTitleSmall}>Estimated Fare</Text>
-                  </View>
-                </View>
-
-                <View style={styles.cardInnerContent}>
-                  <View style={styles.priceRow}>
-                    <Text style={styles.priceAmountText}>
-                      ₹ {estimatedFare.toLocaleString('en-IN')}
-                    </Text>
-                    <Info size={13} color="#64748B" strokeWidth={2.2} />
-                  </View>
-                  <Text style={styles.fareFormulaText}>
-                    (₹ {hourlyRate} per hour × {durationHours} hours)
-                  </Text>
-                  <Text style={styles.fareNoticeText}>
-                    Final amount may vary based on distance, stops and actual usage.
-                  </Text>
-                </View>
-              </View>
-
-              {/* Booking Includes Card */}
-              <View style={[styles.cardContainer, styles.halfColumnCard]}>
-                <View style={styles.cardHeaderRow}>
-                  <Text style={styles.cardHeaderTitleSmall}>Booking Includes</Text>
-                </View>
-
-                <View style={styles.includesList}>
-                  <View style={styles.includesRow}>
-                    <Check size={12} color="#00D2B4" strokeWidth={2.6} />
-                    <Text style={styles.includesText}>Professional driver service</Text>
-                  </View>
-
-                  <View style={styles.includesRow}>
-                    <Check size={12} color="#00D2B4" strokeWidth={2.6} />
-                    <Text style={styles.includesText}>Selected booking duration</Text>
-                  </View>
-
-                  <View style={styles.includesRow}>
-                    <Check size={12} color="#00D2B4" strokeWidth={2.6} />
-                    <Text style={styles.includesText}>Pickup at the selected location</Text>
-                  </View>
-
-                  <View style={styles.includesRow}>
-                    <Check size={12} color="#00D2B4" strokeWidth={2.6} />
-                    <Text style={styles.includesText}>
-                      Optional drop location, if provided
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            </View>
-
-            {/* 4. Payment Method Card */}
-            <View style={styles.cardContainer}>
+            {/* 2. Duration Details Card */}
+            <View style={styles.sectionCard}>
               <View style={styles.cardHeaderRow}>
-                <View style={styles.iconTitleRow}>
-                  <CreditCard size={15} color="#0E1E38" strokeWidth={2.2} />
-                  <Text style={styles.cardHeaderTitle}>Payment Method</Text>
+                <View style={styles.cardHeaderLeft}>
+                  <Clock size={17} color="#0E1E38" strokeWidth={2.2} />
+                  <Text style={styles.cardTitle}>Selected Duration</Text>
                 </View>
-                <TouchableOpacity style={styles.editPillButton} activeOpacity={0.75}>
-                  <Pencil size={11} color="#0284C7" strokeWidth={2.2} />
-                  <Text style={styles.editPillText}>Edit</Text>
+                <TouchableOpacity
+                  style={styles.editButton}
+                  activeOpacity={0.7}
+                  onPress={handleEditDuration}
+                  accessibilityLabel="Edit booking duration"
+                >
+                  <Pencil size={13} color="#00D2B4" strokeWidth={2.4} />
+                  <Text style={styles.editText}>Edit</Text>
                 </TouchableOpacity>
               </View>
 
-              <TouchableOpacity style={styles.paymentCardInner} activeOpacity={0.8}>
-                <View style={styles.visaBadge}>
-                  <Text style={styles.visaText}>VISA</Text>
+              <View style={styles.durationContentRow}>
+                <View style={styles.durationPillBadge}>
+                  <Text style={styles.durationPillText}>{selectedDuration.label}</Text>
                 </View>
-                <View style={styles.paymentCardDetails}>
-                  <Text style={styles.cardNumberText}>•••• 4242</Text>
-                  <Text style={styles.cardHolderText}>John Doe</Text>
-                </View>
-                <ChevronRight size={17} color="#94A3B8" strokeWidth={2.2} />
-              </TouchableOpacity>
+                <Text style={styles.durationDescText} numberOfLines={2}>
+                  {selectedDuration.description.replace(/\n/g, ' ')}
+                </Text>
+              </View>
             </View>
 
-            {/* 5. Cancellation Policy Card */}
-            <View style={styles.policyCard}>
+            {/* 3. Date & Time Card */}
+            <View style={styles.sectionCard}>
               <View style={styles.cardHeaderRow}>
-                <View style={styles.iconTitleRow}>
-                  <Info size={15} color="#0284C7" strokeWidth={2.4} />
-                  <Text style={styles.policyTitle}>Cancellation Policy</Text>
+                <View style={styles.cardHeaderLeft}>
+                  <Calendar size={17} color="#0E1E38" strokeWidth={2.2} />
+                  <Text style={styles.cardTitle}>Date & Time</Text>
                 </View>
-                <TouchableOpacity activeOpacity={0.75}>
-                  <Text style={styles.viewPolicyText}>View Policy →</Text>
+                <TouchableOpacity
+                  style={styles.editButton}
+                  activeOpacity={0.7}
+                  onPress={handleEditDateTime}
+                  accessibilityLabel="Edit date and time"
+                >
+                  <Pencil size={13} color="#00D2B4" strokeWidth={2.4} />
+                  <Text style={styles.editText}>Edit</Text>
                 </TouchableOpacity>
               </View>
 
-              <View style={styles.bulletRow}>
-                <Text style={styles.bulletSymbol}>•</Text>
-                <Text style={styles.bulletText}>
-                  You can cancel or modify the booking before the scheduled time.
-                </Text>
+              <View style={styles.dateTimeGrid}>
+                <View style={styles.dateTimeBox}>
+                  <Text style={styles.microLabel}>Scheduled Date</Text>
+                  <Text style={styles.dateTimeValText}>
+                    {formatDisplayDate(selectedDate)}
+                  </Text>
+                </View>
+                <View style={styles.dateTimeBox}>
+                  <Text style={styles.microLabel}>Pickup Time</Text>
+                  <Text style={styles.dateTimeValText}>
+                    {pickupTimingMode === 'now' ? 'Now (Immediate)' : selectedTime}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {/* 4. Fare Breakdown Card */}
+            <View style={styles.sectionCard}>
+              <View style={styles.cardHeaderRow}>
+                <View style={styles.cardHeaderLeft}>
+                  <CircleDollarSign size={17} color="#0E1E38" strokeWidth={2.2} />
+                  <Text style={styles.cardTitle}>Fare Breakdown</Text>
+                </View>
               </View>
 
-              <View style={styles.bulletRow}>
-                <Text style={styles.bulletSymbol}>•</Text>
-                <Text style={styles.bulletText}>
-                  Cancellation charges may apply as per our policy.
-                </Text>
+              <View style={styles.fareRow}>
+                <Text style={styles.fareLabel}>Base Rate ({selectedDuration.label})</Text>
+                <Text style={styles.fareAmount}>₹ {estimatedFare}</Text>
+              </View>
+              <View style={styles.fareRow}>
+                <Text style={styles.fareLabelSub}>Rate per hour: ₹ {hourlyRate}</Text>
+                <Text style={styles.fareLabelSub}>Duration: {durationHours}h</Text>
               </View>
 
-              <View style={styles.bulletRow}>
-                <Text style={styles.bulletSymbol}>•</Text>
-                <Text style={styles.bulletText}>
-                  For any assistance, contact our 24/7 support.
-                </Text>
+              <View style={styles.fareDivider} />
+
+              <View style={styles.fareTotalRow}>
+                <View>
+                  <Text style={styles.fareTotalTitle}>Estimated Total</Text>
+                  <Text style={styles.fareTotalSub}>Includes GST & all driver charges</Text>
+                </View>
+                <Text style={styles.fareTotalValue}>₹ {estimatedFare}</Text>
+              </View>
+            </View>
+
+            {/* 5. Booking Inclusions */}
+            <View style={styles.inclusionsCard}>
+              <View style={styles.inclusionItem}>
+                <Check size={16} color="#00D2B4" strokeWidth={2.4} />
+                <Text style={styles.inclusionText}>Verified & police background-checked driver</Text>
+              </View>
+              <View style={styles.inclusionItem}>
+                <Check size={16} color="#00D2B4" strokeWidth={2.4} />
+                <Text style={styles.inclusionText}>Fuel, driver allowance & return trip covered</Text>
+              </View>
+              <View style={styles.inclusionItem}>
+                <Check size={16} color="#00D2B4" strokeWidth={2.4} />
+                <Text style={styles.inclusionText}>Free cancellation up to 1 hour before pickup</Text>
               </View>
             </View>
           </ScrollView>
 
-          {/* Pinned Bottom CTA Container */}
-          <View style={styles.bottomCtaContainer}>
+          {/* Sticky Bottom CTA */}
+          <View
+            style={[
+              styles.bottomCtaContainer,
+              { paddingBottom: Math.max(insets.bottom, 12) },
+            ]}
+          >
             <TouchableOpacity
-              style={styles.confirmButtonWrapper}
+              style={styles.continueButtonWrapper}
               activeOpacity={0.88}
               onPress={handleConfirmBooking}
+              accessibilityLabel="Proceed to payment"
             >
               <LinearGradient
                 colors={['#00E5C4', '#00D2B4']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
-                style={styles.confirmButton}
+                style={styles.continueButton}
               >
-                <Text style={styles.confirmButtonText}>Confirm Booking</Text>
+                <Text style={styles.continueButtonText}>Proceed to Payment</Text>
                 <ArrowRight size={18} color="#072038" strokeWidth={2.6} />
               </LinearGradient>
             </TouchableOpacity>
@@ -473,95 +657,118 @@ export default function BookingSummaryScreen() {
 }
 
 const styles = StyleSheet.create({
-  outerContainer: {
+  // =========================================================================
+  // DESKTOP SPECIFIC STYLES (Matching Reference Design)
+  // =========================================================================
+  desktopOuterContainer: {
     flex: 1,
-    backgroundColor: '#0A111F',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: '#F8FAFC',
+    minHeight: '100%',
   },
-  appFrame: {
-    width: '100%',
-    maxWidth: 412,
-    backgroundColor: '#FFFFFF',
-    overflow: 'hidden',
-  },
-  appFrameDesktop: {
-    borderRadius: 36,
-    borderWidth: 1.5,
-    borderColor: '#1E293B',
-    shadowColor: '#00D2B4',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.16,
-    shadowRadius: 28,
-  },
-  safeArea: {
+  desktopBodyRow: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    display: 'flex',
+    flexDirection: 'row',
+    minHeight: '100%',
+  },
+  desktopContentArea: {
+    flex: 1,
+    position: 'relative',
+    backgroundColor: '#F7FAFC',
+  },
+  topRightDots: {
+    position: 'absolute',
+    top: 40,
+    right: 28,
+    zIndex: 0,
+  },
+  bottomRightDots: {
+    position: 'absolute',
+    bottom: 40,
+    right: 28,
+    zIndex: 0,
+  },
+  dotGridContainer: {
     flexDirection: 'column',
+    gap: 9,
   },
-  simulatedStatusBar: {
+  dotGridRow: {
     flexDirection: 'row',
+    gap: 9,
+  },
+  dotGridDot: {
+    width: 4.5,
+    height: 4.5,
+    borderRadius: 2.25,
+    backgroundColor: '#00D2B4',
+    opacity: 0.38,
+  },
+  desktopScroll: {
+    flex: 1,
+    zIndex: 1,
+  },
+  desktopScrollContent: {
+    paddingHorizontal: 36,
+    paddingVertical: 28,
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 4,
+  },
+  desktopMainCard: {
+    width: '100%',
+    maxWidth: 960,
     backgroundColor: '#FFFFFF',
-  },
-  simulatedStatusTime: {
-    fontFamily: FONT.semiBold,
-    fontSize: 14,
-    color: '#0E1E38',
-  },
-  simulatedStatusIcons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  cellularBars: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 1.5,
-    height: 10,
-    marginRight: 2,
-  },
-  cellularBar: {
-    width: 2.5,
-    backgroundColor: '#0E1E38',
-    borderRadius: 1,
-  },
-  topHeaderBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: '#FFFFFF',
-  },
-  backButtonCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderRadius: 24,
+    padding: 32,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
+    borderColor: '#EDF2F7',
+    shadowColor: '#071226',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 16,
+    elevation: 3,
   },
-  brandCenter: {
+  dtCardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+  },
+  dtCardHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  dtBackButtonCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
     alignItems: 'center',
     justifyContent: 'center',
+    ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : {}),
   },
-  logoEmblem: {
-    width: 44,
-    height: 22,
-    marginBottom: -2,
+  dtTitleColumn: {
+    gap: 2,
+  },
+  dtPageTitle: {
+    fontFamily: FONT.bold,
+    fontSize: 22,
+    color: '#0E1E38',
+    letterSpacing: -0.4,
+  },
+  dtPageSubtitle: {
+    fontFamily: FONT.regular,
+    fontSize: 13,
+    color: '#64748B',
+  },
+  dtBrandCenter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  dtLogoEmblem: {
+    width: 32,
+    height: 20,
   },
   brandTextRow: {
     flexDirection: 'row',
@@ -569,350 +776,626 @@ const styles = StyleSheet.create({
   },
   brandTextNavy: {
     fontFamily: FONT.bold,
-    fontSize: 19,
+    fontSize: 18,
     color: '#0E1E38',
     letterSpacing: -0.4,
   },
   brandTextTeal: {
     fontFamily: FONT.bold,
-    fontSize: 19,
+    fontSize: 18,
     color: '#00D2B4',
     letterSpacing: -0.4,
   },
-  titleSection: {
-    paddingHorizontal: 18,
-    paddingTop: 6,
-    paddingBottom: 12,
+
+  /* Locations Card */
+  dtLocationsCard: {
     backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#EDF2F7',
+    borderRadius: 18,
+    padding: 20,
+    marginBottom: 20,
+  },
+  dtCardTopHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  dtCardTitleWithIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  dtIconCircleBlue: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#E0F2FE',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dtIconCircleGreen: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#DCFCE7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dtIconCircleTeal: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#CCFBF1',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dtSectionCardTitle: {
+    fontFamily: FONT.bold,
+    fontSize: 15.5,
+    color: '#0E1E38',
+  },
+  dtEditPillBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#F0F9FF',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+    ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : {}),
+  },
+  dtEditPillText: {
+    fontFamily: FONT.semiBold,
+    fontSize: 12,
+    color: '#0284C7',
+  },
+  dtLocationsSplitRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 20,
+  },
+  dtLocationDetailsColumn: {
+    flex: 1.3,
+  },
+  dtLocationPointRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  dtMarkerDotGreen: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#10B981',
+    borderWidth: 2,
+    borderColor: '#D1FAE5',
+  },
+  dtMarkerDotRed: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#EF4444',
+    borderWidth: 2,
+    borderColor: '#FEE2E2',
+  },
+  dtLocationTextWrap: {
+    flex: 1,
+  },
+  dtMicroLabel: {
+    fontFamily: FONT.medium,
+    fontSize: 11,
+    color: '#94A3B8',
+  },
+  dtAddressTitle: {
+    fontFamily: FONT.bold,
+    fontSize: 13.5,
+    color: '#0E1E38',
+    marginTop: 1,
+  },
+  dtDottedLineContainer: {
+    paddingLeft: 5,
+    marginVertical: 4,
+    gap: 3,
+  },
+  dtDottedSegment: {
+    width: 2,
+    height: 4,
+    borderRadius: 1,
+    backgroundColor: '#CBD5E1',
+  },
+  dtRouteMetricsBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#F0FDF4',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#DCFCE7',
+    marginTop: 14,
+  },
+  dtRouteMetricsText: {
+    fontFamily: FONT.medium,
+    fontSize: 12,
+    color: '#059669',
+  },
+  dtMapThumbnailContainer: {
+    flex: 0.9,
+    height: 120,
+    borderRadius: 14,
+    overflow: 'hidden',
+    position: 'relative',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : {}),
+  },
+  dtMapThumbnailImage: {
+    width: '100%',
+    height: '100%',
+  },
+  dtViewMapOverlayPill: {
+    position: 'absolute',
+    bottom: 8,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  dtViewMapOverlayText: {
+    fontFamily: FONT.bold,
+    fontSize: 11.5,
+    color: '#0284C7',
+  },
+
+  /* Three Summary Tiles Row */
+  dtThreeCardsRow: {
+    flexDirection: 'row',
+    gap: 16,
+    marginBottom: 20,
+  },
+  dtSummaryTile: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#EDF2F7',
+    borderRadius: 18,
+    padding: 18,
+  },
+  dtTileHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  dtTileIconLabel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  dtTileLabel: {
+    fontFamily: FONT.semiBold,
+    fontSize: 13.5,
+    color: '#64748B',
+  },
+  dtMiniEditBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: '#F0F9FF',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+    ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : {}),
+  },
+  dtMiniEditText: {
+    fontFamily: FONT.semiBold,
+    fontSize: 11,
+    color: '#0284C7',
+  },
+  dtTilePrimaryValue: {
+    fontFamily: FONT.bold,
+    fontSize: 16,
+    color: '#0E1E38',
+    marginBottom: 4,
+  },
+  dtTileSecondaryDesc: {
+    fontFamily: FONT.regular,
+    fontSize: 12,
+    color: '#94A3B8',
+    lineHeight: 16,
+  },
+  dtTimeRowInsideTile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 2,
+  },
+  dtTimeValueInsideTile: {
+    fontFamily: FONT.medium,
+    fontSize: 12.5,
+    color: '#0E1E38',
+  },
+  dtFareValueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 2,
+  },
+  dtFareLargeText: {
+    fontFamily: FONT.bold,
+    fontSize: 20,
+    color: '#0E1E38',
+  },
+  dtInfoCircleSmall: {
+    marginTop: 2,
+  },
+  dtFareBreakdownSubtext: {
+    fontFamily: FONT.regular,
+    fontSize: 11.5,
+    color: '#64748B',
+    marginBottom: 6,
+  },
+  dtFareDisclaimerText: {
+    fontFamily: FONT.regular,
+    fontSize: 10,
+    color: '#94A3B8',
+    lineHeight: 14,
+  },
+
+  /* Inclusions Card */
+  dtIncludesCard: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#EDF2F7',
+    borderRadius: 18,
+    padding: 20,
+    marginBottom: 26,
+  },
+  dtIncludesHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 14,
+  },
+  dtIncludesTitle: {
+    fontFamily: FONT.bold,
+    fontSize: 14.5,
+    color: '#0E1E38',
+  },
+  dtIncludesList: {
+    gap: 8,
+  },
+  dtIncludeItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  dtIncludeItemText: {
+    fontFamily: FONT.medium,
+    fontSize: 12.5,
+    color: '#334155',
+  },
+
+  /* Continue Button */
+  dtConfirmButton: {
+    backgroundColor: '#00D2B4',
+    height: 48,
+    borderRadius: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    alignSelf: 'flex-end',
+    paddingHorizontal: 36,
+    shadowColor: '#00D2B4',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 3,
+    ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : {}),
+  },
+  dtConfirmButtonText: {
+    fontFamily: FONT.bold,
+    fontSize: 14.5,
+    color: '#FFFFFF',
+  },
+
+  // =========================================================================
+  // MOBILE BASE STYLES
+  // =========================================================================
+  outerContainer: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    flexDirection: 'column',
+  },
+  topHeaderBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F8FAFC',
+  },
+  backButtonCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F8FAFC',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  brandCenter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  logoEmblem: {
+    width: 32,
+    height: 20,
+  },
+  titleSection: {
+    paddingHorizontal: 20,
+    paddingTop: 14,
+    paddingBottom: 6,
   },
   pageTitle: {
     fontFamily: FONT.bold,
-    fontSize: 24,
+    fontSize: 22,
     color: '#0E1E38',
     letterSpacing: -0.4,
   },
   pageSubtitle: {
     fontFamily: FONT.regular,
-    fontSize: 13.5,
+    fontSize: 13,
     color: '#64748B',
-    marginTop: 4,
-    lineHeight: 18,
+    marginTop: 2,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
+    paddingTop: 10,
     paddingBottom: 24,
   },
-  cardContainer: {
+  sectionCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    borderWidth: 1.2,
+    borderWidth: 1,
     borderColor: '#E2E8F0',
-    padding: 13,
-    marginBottom: 10,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.02,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  twoColumnRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 0,
-  },
-  halfColumnCard: {
-    flex: 1,
+    padding: 16,
+    marginBottom: 14,
   },
   cardHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    marginBottom: 12,
   },
-  iconTitleRow: {
+  cardHeaderLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
   },
-  cardHeaderTitle: {
+  cardTitle: {
     fontFamily: FONT.bold,
     fontSize: 14.5,
     color: '#0E1E38',
   },
-  cardHeaderTitleSmall: {
-    fontFamily: FONT.bold,
-    fontSize: 13,
-    color: '#0E1E38',
-  },
-  editPillButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3.5,
-    backgroundColor: '#F0F9FF',
-    paddingHorizontal: 8,
-    paddingVertical: 3.5,
-    borderRadius: 10,
-  },
-  editPillText: {
-    fontFamily: FONT.semiBold,
-    fontSize: 11,
-    color: '#0284C7',
-  },
-  tripLocationsBody: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  timelineColumn: {
-    flex: 1,
-  },
-  locationTimelineRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-  },
-  locationPinCircleTeal: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: '#E6FAF6',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 2,
-  },
-  locationPinCircleRed: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: '#FEE2E2',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 2,
-  },
-  locationTextWrapper: {
-    flex: 1,
-  },
-  locationMicroLabel: {
-    fontFamily: FONT.medium,
-    fontSize: 10.5,
-    color: '#64748B',
-    marginBottom: 1,
-  },
-  locationAddressText: {
-    fontFamily: FONT.bold,
-    fontSize: 12.5,
-    color: '#0E1E38',
-    lineHeight: 16,
-  },
-  dottedConnectorContainer: {
-    marginLeft: 10,
-    height: 18,
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginVertical: 2,
-  },
-  dottedDot: {
-    width: 2,
-    height: 2.5,
-    borderRadius: 1,
-    backgroundColor: '#94A3B8',
-  },
-  miniMapWrapper: {
-    width: 126,
-    height: 100,
-    borderRadius: 12,
-    overflow: 'hidden',
-    position: 'relative',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  miniMapImage: {
-    width: '100%',
-    height: '100%',
-  },
-  viewOnMapButton: {
-    position: 'absolute',
-    bottom: 5,
-    alignSelf: 'center',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 8,
-    paddingVertical: 3.5,
-    borderRadius: 10,
+  editButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.12,
-    shadowRadius: 3,
-    elevation: 2,
+    backgroundColor: '#F0FDFA',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
-  viewOnMapText: {
-    fontFamily: FONT.bold,
-    fontSize: 9.5,
-    color: '#0284C7',
+  editText: {
+    fontFamily: FONT.semiBold,
+    fontSize: 12,
+    color: '#00D2B4',
   },
-  cardInnerContent: {
-    paddingTop: 2,
+  locationContainer: {
+    gap: 4,
   },
-  highlightBoldText: {
-    fontFamily: FONT.bold,
-    fontSize: 14.5,
+  pointRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  dotPickup: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#00D2B4',
+  },
+  dotDrop: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#EF4444',
+  },
+  addressWrap: {
+    flex: 1,
+  },
+  microLabel: {
+    fontFamily: FONT.medium,
+    fontSize: 11,
+    color: '#94A3B8',
+  },
+  addressText: {
+    fontFamily: FONT.semiBold,
+    fontSize: 13,
     color: '#0E1E38',
-    marginBottom: 2,
   },
-  subtextSmall: {
-    fontFamily: FONT.regular,
-    fontSize: 10.5,
-    color: '#64748B',
-    lineHeight: 14,
+  dottedLineContainer: {
+    paddingLeft: 4,
+    marginVertical: 2,
+    gap: 3,
   },
-  dateTimeLines: {
-    gap: 6,
-    paddingTop: 2,
+  dotSegment: {
+    width: 2,
+    height: 3,
+    borderRadius: 1,
+    backgroundColor: '#CBD5E1',
   },
-  dateTimeLine: {
+  routeMetricsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    marginTop: 12,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  metricItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
   },
-  dateTimeValueText: {
-    fontFamily: FONT.bold,
-    fontSize: 12.5,
-    color: '#0E1E38',
+  metricLabel: {
+    fontFamily: FONT.medium,
+    fontSize: 11.5,
+    color: '#64748B',
   },
-  priceRow: {
+  durationContentRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginBottom: 3,
+    gap: 12,
   },
-  priceAmountText: {
+  durationPillBadge: {
+    backgroundColor: '#F0FDFA',
+    borderWidth: 1,
+    borderColor: '#CCFBF1',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+  },
+  durationPillText: {
     fontFamily: FONT.bold,
-    fontSize: 19,
-    color: '#0E1E38',
+    fontSize: 13,
+    color: '#00A896',
   },
-  fareFormulaText: {
+  durationDescText: {
+    flex: 1,
     fontFamily: FONT.regular,
-    fontSize: 10,
+    fontSize: 12,
     color: '#64748B',
+  },
+  dateTimeGrid: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  dateTimeBox: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    padding: 10,
+  },
+  dateTimeValText: {
+    fontFamily: FONT.bold,
+    fontSize: 13,
+    color: '#0E1E38',
+    marginTop: 2,
+  },
+  fareRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 4,
   },
-  fareNoticeText: {
+  fareLabel: {
+    fontFamily: FONT.medium,
+    fontSize: 13,
+    color: '#334155',
+  },
+  fareAmount: {
+    fontFamily: FONT.bold,
+    fontSize: 14,
+    color: '#0E1E38',
+  },
+  fareLabelSub: {
     fontFamily: FONT.regular,
-    fontSize: 9,
-    color: '#94A3B8',
-    lineHeight: 12,
+    fontSize: 11.5,
+    color: '#64748B',
   },
-  includesList: {
-    gap: 5,
-    paddingTop: 2,
+  fareDivider: {
+    height: 1,
+    backgroundColor: '#F1F5F9',
+    marginVertical: 10,
   },
-  includesRow: {
+  fareTotalRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 5,
-  },
-  includesText: {
-    flex: 1,
-    fontFamily: FONT.regular,
-    fontSize: 9.8,
-    color: '#475569',
-    lineHeight: 13,
-  },
-  paymentCardInner: {
-    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 10,
-    paddingTop: 2,
   },
-  visaBadge: {
-    width: 44,
-    height: 28,
-    borderRadius: 6,
+  fareTotalTitle: {
+    fontFamily: FONT.bold,
+    fontSize: 14,
+    color: '#0E1E38',
+  },
+  fareTotalSub: {
+    fontFamily: FONT.regular,
+    fontSize: 11,
+    color: '#64748B',
+    marginTop: 1,
+  },
+  fareTotalValue: {
+    fontFamily: FONT.bold,
+    fontSize: 18,
+    color: '#00A896',
+  },
+  inclusionsCard: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    padding: 14,
+    gap: 8,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
-  visaText: {
-    fontFamily: FONT.bold,
-    fontSize: 12.5,
-    color: '#1A1F71',
-    letterSpacing: 0.5,
-  },
-  paymentCardDetails: {
-    flex: 1,
-  },
-  cardNumberText: {
-    fontFamily: FONT.bold,
-    fontSize: 13,
-    color: '#0E1E38',
-  },
-  cardHolderText: {
-    fontFamily: FONT.regular,
-    fontSize: 10.5,
-    color: '#64748B',
-  },
-  policyCard: {
-    backgroundColor: '#F0F9FF',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#E0F2FE',
-    padding: 13,
-    marginTop: 2,
-    marginBottom: 10,
-  },
-  policyTitle: {
-    fontFamily: FONT.bold,
-    fontSize: 13,
-    color: '#0E1E38',
-  },
-  viewPolicyText: {
-    fontFamily: FONT.semiBold,
-    fontSize: 11,
-    color: '#0284C7',
-  },
-  bulletRow: {
+  inclusionItem: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 6,
-    marginTop: 3,
+    alignItems: 'center',
+    gap: 8,
   },
-  bulletSymbol: {
-    fontFamily: FONT.bold,
-    fontSize: 11,
-    color: '#64748B',
-    lineHeight: 15,
-  },
-  bulletText: {
-    flex: 1,
+  inclusionText: {
     fontFamily: FONT.regular,
-    fontSize: 11,
-    color: '#64748B',
-    lineHeight: 15,
+    fontSize: 12,
+    color: '#334155',
   },
   bottomCtaContainer: {
-    flexShrink: 0,
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: '#F8FAFC',
   },
-  confirmButtonWrapper: {
+  continueButtonWrapper: {
     width: '100%',
-    shadowColor: '#00D2B4',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.28,
-    shadowRadius: 12,
-    elevation: 4,
   },
-  confirmButton: {
+  continueButton: {
     height: 52,
     borderRadius: 26,
     flexDirection: 'row',
@@ -920,11 +1403,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
   },
-  confirmButtonText: {
+  continueButtonText: {
     fontFamily: FONT.bold,
     fontSize: 15.5,
     color: '#072038',
-    letterSpacing: -0.2,
   },
   homeIndicator: {
     width: 134,

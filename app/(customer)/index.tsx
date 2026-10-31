@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,10 +6,10 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  TextInput,
   useWindowDimensions,
   Platform,
   Pressable,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -17,23 +17,15 @@ import { useRouter } from 'expo-router';
 import {
   Bell,
   Clock,
-  Sun,
   Calendar,
-  MapPin,
-  LocateFixed,
   ArrowRight,
   ShieldCheck,
-  Car,
-  CreditCard,
-  Headphones,
   Home as HomeIcon,
-  Briefcase,
-  Users,
-  Star,
   MoreVertical,
   History,
   User,
   ChevronRight,
+  ChevronDown,
   Wifi,
   Battery,
 } from 'lucide-react-native';
@@ -44,12 +36,53 @@ import {
   DURATION_OPTIONS,
   SavedPlace,
 } from '../../src/store/bookingStore';
+import {
+  getCurrentLocation,
+  reverseGeocodeLocation,
+} from '../../src/services/location/locationService';
 import { FONT } from '../../src/theme/typography';
+import { TrustFeaturesBar } from '../../src/components/common/TrustFeaturesBar';
+import { SavedPlaceCard } from '../../src/components/common/SavedPlaceCard';
+import { RecentBookingCard } from '../../src/components/common/RecentBookingCard';
+import { DesktopHeader } from '../../src/components/common/DesktopHeader';
+import { DesktopSidebar } from '../../src/components/common/DesktopSidebar';
+import { DurationPill } from '../../src/components/common/DurationPill';
+import { LocationInputCard } from '../../src/components/common/LocationInputCard';
+
+const DESKTOP_DURATION_ITEMS = [
+  { id: '1h', label: '1 Hour', subtitle: 'Quick Rides', iconType: 'clock' },
+  { id: '2h', label: '2 Hours', subtitle: 'Business Trips', iconType: 'clock' },
+  { id: '4h', label: '4 Hours', subtitle: 'City Tours', iconType: 'clock' },
+  { id: '6h', label: '6 Hours', subtitle: 'Longer Trips', iconType: 'clock' },
+  { id: 'fullday', label: 'Full Day', subtitle: 'Full Day', iconType: 'sun' },
+];
+
+/**
+ * Decorative 6x6 dot matrix pattern component matching desktop reference design
+ */
+const DotGrid = () => {
+  const rows = [0, 1, 2, 3, 4, 5];
+  const cols = [0, 1, 2, 3, 4, 5];
+  return (
+    <View style={styles.dotGridContainer}>
+      {rows.map((r) => (
+        <View key={r} style={styles.dotGridRow}>
+          {cols.map((c) => (
+            <View key={c} style={styles.dotGridDot} />
+          ))}
+        </View>
+      ))}
+    </View>
+  );
+};
 
 export default function CustomerHomeScreen() {
   const router = useRouter();
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
-  const isDesktopOrTablet = windowWidth > 600;
+  const isDesktopOrTablet =
+    windowWidth > 600 ||
+    (Platform.OS === 'web' && typeof window !== 'undefined' && window.innerWidth > 600);
+  const [isLocating, setIsLocating] = useState(false);
 
   // Zustand state
   const selectedDurationId = useBookingStore((state) => state.selectedDurationId);
@@ -57,26 +90,54 @@ export default function CustomerHomeScreen() {
   const dropLocation = useBookingStore((state) => state.dropLocation);
   const activeTab = useBookingStore((state) => state.activeTab);
   const savedPlaces = useBookingStore((state) => state.savedPlaces);
+  const userName = useBookingStore((state) => state.userName);
+  const unreadNotifications = useBookingStore((state) => state.unreadNotifications);
+  const recentBookings = useBookingStore((state) => state.recentBookings);
+  const loadHomeScreenData = useBookingStore((state) => state.loadHomeScreenData);
+  const markNotificationsAsRead = useBookingStore((state) => state.markNotificationsAsRead);
 
   const setSelectedDurationId = useBookingStore((state) => state.setSelectedDurationId);
   const setPickupLocation = useBookingStore((state) => state.setPickupLocation);
+  const setPickupCoords = useBookingStore((state) => state.setPickupCoords);
   const setDropLocation = useBookingStore((state) => state.setDropLocation);
   const setActiveTab = useBookingStore((state) => state.setActiveTab);
   const applySavedPlace = useBookingStore((state) => state.applySavedPlace);
 
-  const pickupInputRef = useRef<any>(null);
-  const dropInputRef = useRef<any>(null);
+  const hasUnreadNotification = unreadNotifications > 0;
 
-  const [hasUnreadNotification, setHasUnreadNotification] = useState(true);
+  useEffect(() => {
+    loadHomeScreenData();
+  }, []);
 
   const handleDurationSelect = (id: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     setSelectedDurationId(id);
   };
 
-  const handleUseCurrentLocation = () => {
+  const handleUseCurrentLocation = async () => {
+    if (isLocating) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    setPickupLocation('Current Location (Gandhipuram, Coimbatore)');
+    setIsLocating(true);
+
+    try {
+      const result = await getCurrentLocation();
+      if (result.success) {
+        // Resolve readable street address for acquired device position
+        const geocodeResult = await reverseGeocodeLocation(result.coords);
+        setPickupLocation(geocodeResult.address);
+        setPickupCoords({
+          latitude: result.coords.latitude,
+          longitude: result.coords.longitude,
+          address: geocodeResult.address,
+        });
+      } else {
+        Alert.alert('Location Unavailable', result.message);
+      }
+    } catch {
+      Alert.alert('Location Error', 'Unable to retrieve your current location. Please try again.');
+    } finally {
+      setIsLocating(false);
+    }
   };
 
   const handleBookDriver = () => {
@@ -87,58 +148,143 @@ export default function CustomerHomeScreen() {
   const handleTabPress = (tab: 'home' | 'bookings' | 'history' | 'profile') => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     setActiveTab(tab);
+    if (tab === 'bookings') {
+      router.push('/(customer)/my-bookings');
+    } else if (tab === 'history') {
+      router.push('/(customer)/trip-history');
+    } else if (tab === 'profile') {
+      router.push('/(customer)/profile');
+    }
   };
 
-  const renderDurationIcon = (id: string, isSelected: boolean) => {
-    const iconColor = isSelected ? '#00D2B4' : '#00D2B4';
-    const iconSize = 18;
-    if (id === 'fullday') return <Sun size={iconSize} color={iconColor} strokeWidth={2.4} />;
-    if (id === '1week') return <Calendar size={iconSize} color={iconColor} strokeWidth={2.2} />;
-    return <Clock size={iconSize} color={iconColor} strokeWidth={2.4} />;
-  };
 
-  const renderSavedPlaceIcon = (type: SavedPlace['type']) => {
-    const iconSize = 18;
-    const iconColor = '#00D2B4';
-    if (type === 'home') return <HomeIcon size={iconSize} color={iconColor} strokeWidth={2.2} />;
-    if (type === 'office') return <Briefcase size={iconSize} color={iconColor} strokeWidth={2.2} />;
-    if (type === 'parents') return <Users size={iconSize} color={iconColor} strokeWidth={2.2} />;
-    return <Star size={iconSize} color={iconColor} strokeWidth={2.2} />;
-  };
 
-  const desktopFrameHeight = isDesktopOrTablet ? Math.min(windowHeight - 24, 880) : '100%';
+  // DESKTOP HOME SCREEN VIEW
+  if (isDesktopOrTablet) {
+    return (
+      <View style={styles.desktopOuterContainer}>
+        <StatusBar style="dark" />
 
+        {/* 1. Top Navigation Bar Header */}
+        <DesktopHeader activeTab="home" />
+
+        <View style={styles.desktopBodyRow}>
+          {/* Left Persistent Navigation Sidebar */}
+          <DesktopSidebar activeTab="home" />
+
+          {/* Main Content Area */}
+          <View style={styles.desktopContentArea}>
+            {/* Decorative Matrix Dots */}
+            <View style={styles.topRightDots} pointerEvents="none">
+              <DotGrid />
+            </View>
+            <View style={styles.bottomRightDots} pointerEvents="none">
+              <DotGrid />
+            </View>
+
+            <ScrollView
+              style={styles.desktopScroll}
+              contentContainerStyle={styles.desktopScrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.desktopMainRow}>
+                {/* LEFT COLUMN: Hero Banner Card */}
+                <View style={styles.desktopHeroCard}>
+                  <Image
+                    source={require('../../assets/Login page image desktop.png')}
+                    style={styles.desktopHeroBgImage}
+                    resizeMode="cover"
+                  />
+
+                  {/* Top Hero Text */}
+                  <View style={styles.desktopHeroTextContainer}>
+                    <Text style={styles.desktopHeroTitleNavy}>Professional Drivers,</Text>
+                    <Text style={styles.desktopHeroTitleTeal}>On Your Time</Text>
+                    <Text style={styles.desktopHeroSubtitle}>
+                      Safe, reliable and convenient driver service{"\n"}for any duration.
+                    </Text>
+                  </View>
+
+                  {/* Floating Bottom Trust Badges Card */}
+                  <TrustFeaturesBar variant="desktop" />
+                </View>
+
+                {/* RIGHT COLUMN: Booking Form Card */}
+                <View style={styles.desktopBookingCard}>
+                  {/* Premium Pill Badge */}
+                  <View style={styles.desktopPremiumBadge}>
+                    <ShieldCheck size={14} color="#00D2B4" strokeWidth={2.2} />
+                    <Text style={styles.desktopPremiumBadgeText}>Premium Chauffeur Service</Text>
+                  </View>
+
+                  {/* Title & Subtitle */}
+                  <Text style={styles.desktopBookingTitle}>Book a Driver</Text>
+                  <Text style={styles.desktopBookingSubtitle}>
+                    Safe, reliable and convenient driver service{"\n"}for any occasion.
+                  </Text>
+
+                  {/* Select Duration Section Header */}
+                  <View style={styles.desktopDurationHeaderRow}>
+                    <Clock size={16} color="#0E1E38" strokeWidth={2.2} />
+                    <Text style={styles.desktopDurationTitle}>Select Duration</Text>
+                  </View>
+
+                  {/* 5 Duration Options Grid/Row */}
+                  <View style={styles.desktopDurationGrid}>
+                    {DESKTOP_DURATION_ITEMS.map((item) => (
+                      <DurationPill
+                        key={item.id}
+                        item={item}
+                        isSelected={item.id === selectedDurationId}
+                        onPress={handleDurationSelect}
+                        variant="desktop"
+                      />
+                    ))}
+                  </View>
+
+                  {/* Pickup & Drop Location Cards */}
+                  <LocationInputCard
+                    pickupLocation={pickupLocation}
+                    dropLocation={dropLocation}
+                    onPressPickup={() => router.push('/(customer)/select-location')}
+                    onPressDrop={() => router.push('/(customer)/select-location')}
+                    onUseCurrentLocation={handleUseCurrentLocation}
+                    variant="desktop"
+                  />
+
+                  {/* Book a Driver Action Button */}
+                  <TouchableOpacity
+                    style={styles.desktopBookButtonWrapper}
+                    activeOpacity={0.88}
+                    onPress={handleBookDriver}
+                  >
+                    <LinearGradient
+                      colors={['#00E5C4', '#00D2B4']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.desktopBookButton}
+                    >
+                      <Text style={styles.desktopBookButtonText}>Book a Driver</Text>
+                      <ArrowRight size={19} color="#FFFFFF" strokeWidth={2.6} />
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  // MOBILE APP VIEW
   return (
     <View style={styles.outerContainer}>
       <StatusBar style="dark" />
 
       {/* Responsive App Frame */}
-      <View
-        style={[
-          styles.appFrame,
-          isDesktopOrTablet
-            ? [styles.appFrameDesktop, { height: desktopFrameHeight }]
-            : { height: '100%', flex: 1 },
-        ]}
-      >
+      <View style={{ height: '100%', flex: 1, backgroundColor: '#FFFFFF' }}>
         <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-          {/* Simulated iOS Status Bar on Desktop/Web for exact design replication */}
-          {isDesktopOrTablet && (
-            <View style={styles.simulatedStatusBar}>
-              <Text style={styles.simulatedStatusTime}>9:41</Text>
-              <View style={styles.simulatedStatusIcons}>
-                <View style={styles.cellularBars}>
-                  <View style={[styles.cellularBar, { height: 4 }]} />
-                  <View style={[styles.cellularBar, { height: 6 }]} />
-                  <View style={[styles.cellularBar, { height: 8 }]} />
-                  <View style={[styles.cellularBar, { height: 10 }]} />
-                </View>
-                <Wifi size={14} color="#0E1E38" strokeWidth={2.2} />
-                <Battery size={16} color="#0E1E38" strokeWidth={2.2} />
-              </View>
-            </View>
-          )}
-
           {/* Top Bar Header */}
           <View style={styles.headerBar}>
             {/* Brand Logo & Wordmark */}
@@ -161,7 +307,7 @@ export default function CustomerHomeScreen() {
                 activeOpacity={0.7}
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                  setHasUnreadNotification(false);
+                  markNotificationsAsRead();
                 }}
                 accessibilityLabel="Notifications"
               >
@@ -218,103 +364,24 @@ export default function CustomerHomeScreen() {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.durationListContainer}
             >
-              {DURATION_OPTIONS.map((item) => {
-                const isSelected = item.id === selectedDurationId;
-                return (
-                  <TouchableOpacity
-                    key={item.id}
-                    style={[
-                      styles.durationPill,
-                      isSelected && styles.durationPillSelected,
-                    ]}
-                    activeOpacity={0.75}
-                    onPress={() => handleDurationSelect(item.id)}
-                  >
-                    <View
-                      style={[
-                        styles.durationIconCircle,
-                        isSelected && styles.durationIconCircleSelected,
-                      ]}
-                    >
-                      {renderDurationIcon(item.id, isSelected)}
-                    </View>
-                    <Text
-                      style={[
-                        styles.durationLabel,
-                        isSelected && styles.durationLabelSelected,
-                      ]}
-                    >
-                      {item.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
+              {DURATION_OPTIONS.map((item) => (
+                <DurationPill
+                  key={item.id}
+                  item={item}
+                  isSelected={item.id === selectedDurationId}
+                  onPress={handleDurationSelect}
+                />
+              ))}
             </ScrollView>
 
             {/* 3. Location Input Card */}
-            <View style={styles.locationCard}>
-              {/* Pickup Location Row */}
-              <TouchableOpacity
-                style={styles.locationRow}
-                activeOpacity={0.85}
-                onPress={() => router.push('/(customer)/select-location')}
-              >
-                <View style={[styles.locationPinBadge, { backgroundColor: '#E6FAF6' }]}>
-                  <MapPin size={17} color="#00D2B4" fill="#00D2B4" strokeWidth={1} />
-                </View>
-
-                <View style={styles.locationInputWrapper} pointerEvents="none">
-                  <Text style={styles.locationLabel}>Pickup Location</Text>
-                  <TextInput
-                    style={styles.locationTextInput}
-                    placeholder="Enter pickup location"
-                    placeholderTextColor="#94A3B8"
-                    value={pickupLocation}
-                    editable={false}
-                  />
-                </View>
-
-                <TouchableOpacity
-                  style={styles.locateButton}
-                  activeOpacity={0.7}
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    handleUseCurrentLocation();
-                  }}
-                  accessibilityLabel="Use current location"
-                >
-                  <LocateFixed size={18} color="#94A3B8" strokeWidth={2} />
-                </TouchableOpacity>
-              </TouchableOpacity>
-
-              {/* Divider Line */}
-              <View style={styles.locationDivider} />
-
-              {/* Drop Location Row */}
-              <TouchableOpacity
-                style={styles.locationRow}
-                activeOpacity={0.85}
-                onPress={() => router.push('/(customer)/select-location')}
-              >
-                <View style={[styles.locationPinBadge, { backgroundColor: '#FEE2E2' }]}>
-                  <MapPin size={17} color="#EF4444" fill="#EF4444" strokeWidth={1} />
-                </View>
-
-                <View style={styles.locationInputWrapper} pointerEvents="none">
-                  <View style={styles.dropLabelRow}>
-                    <Text style={styles.locationLabel}>Drop Location</Text>
-                    <Text style={styles.optionalLabel}> (Optional)</Text>
-                  </View>
-                  <TextInput
-                    style={styles.locationTextInput}
-                    placeholder="Enter drop location (optional)"
-                    placeholderTextColor="#94A3B8"
-                    value={dropLocation}
-                    editable={false}
-                  />
-                </View>
-              </TouchableOpacity>
-            </View>
+            <LocationInputCard
+              pickupLocation={pickupLocation}
+              dropLocation={dropLocation}
+              onPressPickup={() => router.push('/(customer)/select-location')}
+              onPressDrop={() => router.push('/(customer)/select-location')}
+              onUseCurrentLocation={handleUseCurrentLocation}
+            />
 
             {/* 4. Book a Driver Main Action Button */}
             <TouchableOpacity
@@ -334,50 +401,20 @@ export default function CustomerHomeScreen() {
             </TouchableOpacity>
 
             {/* 5. Trust / Feature Badges with vertical dividers */}
-            <View style={styles.featuresRow}>
-              <View style={styles.featureItem}>
-                <View style={styles.featureIconBadge}>
-                  <ShieldCheck size={20} color="#00D2B4" strokeWidth={2.2} />
-                </View>
-                <Text style={styles.featureTitle}>Verified</Text>
-                <Text style={styles.featureTitle}>Drivers</Text>
-              </View>
-
-              <View style={styles.featureDivider} />
-
-              <View style={styles.featureItem}>
-                <View style={styles.featureIconBadge}>
-                  <Car size={20} color="#00D2B4" strokeWidth={2.2} />
-                </View>
-                <Text style={styles.featureTitle}>Real-time</Text>
-                <Text style={styles.featureTitle}>Tracking</Text>
-              </View>
-
-              <View style={styles.featureDivider} />
-
-              <View style={styles.featureItem}>
-                <View style={styles.featureIconBadge}>
-                  <CreditCard size={20} color="#00D2B4" strokeWidth={2.2} />
-                </View>
-                <Text style={styles.featureTitle}>Secure</Text>
-                <Text style={styles.featureTitle}>Payments</Text>
-              </View>
-
-              <View style={styles.featureDivider} />
-
-              <View style={styles.featureItem}>
-                <View style={styles.featureIconBadge}>
-                  <Headphones size={20} color="#00D2B4" strokeWidth={2.2} />
-                </View>
-                <Text style={styles.featureTitle}>24/7</Text>
-                <Text style={styles.featureTitle}>Support</Text>
-              </View>
-            </View>
+            <TrustFeaturesBar />
 
             {/* 6. Saved Places Section */}
             <View style={styles.sectionHeaderRow}>
               <Text style={styles.sectionTitle}>Saved Places</Text>
-              <TouchableOpacity activeOpacity={0.7} style={styles.viewAllButton}>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                style={styles.viewAllButton}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  router.push('/(customer)/saved-locations');
+                }}
+                accessibilityLabel="Manage saved locations"
+              >
                 <Text style={styles.viewAllText}>Manage</Text>
                 <ChevronRight size={14} color="#64748B" strokeWidth={2.4} />
               </TouchableOpacity>
@@ -389,80 +426,54 @@ export default function CustomerHomeScreen() {
               contentContainerStyle={styles.savedPlacesScrollContainer}
             >
               {savedPlaces.map((place: SavedPlace) => (
-                <TouchableOpacity
+                <SavedPlaceCard
                   key={place.id}
-                  style={styles.savedPlaceCard}
-                  activeOpacity={0.75}
+                  place={place}
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
                     applySavedPlace(place);
                   }}
-                >
-                  <View style={styles.savedPlaceIconBadge}>
-                    {renderSavedPlaceIcon(place.type)}
-                  </View>
-
-                  <Text style={styles.savedPlaceTitle} numberOfLines={1}>
-                    {place.title}
-                  </Text>
-                  <Text style={styles.savedPlaceAddress} numberOfLines={2}>
-                    {place.address}
-                  </Text>
-                </TouchableOpacity>
+                />
               ))}
             </ScrollView>
 
             {/* 7. Recent Bookings Section */}
             <View style={styles.sectionHeaderRow}>
               <Text style={styles.sectionTitle}>Recent Bookings</Text>
-              <TouchableOpacity activeOpacity={0.7} style={styles.viewAllButton}>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                style={styles.viewAllButton}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  setActiveTab('history');
+                  router.push('/(customer)/trip-history');
+                }}
+                accessibilityLabel="View all trip history"
+              >
                 <Text style={styles.viewAllText}>View All</Text>
                 <ChevronRight size={14} color="#64748B" strokeWidth={2.4} />
               </TouchableOpacity>
             </View>
 
             {/* Recent Booking Card */}
-            <View style={styles.recentBookingCard}>
-              {/* Left Car Thumbnail */}
-              <View style={styles.bookingCarThumbnailWrapper}>
-                <Image
-                  source={require('../../assets/car_sedan_thumb.jpg')}
-                  style={styles.bookingCarThumbnail}
-                  resizeMode="contain"
-                />
-              </View>
-
-              {/* Middle Booking Details */}
-              <View style={styles.bookingMiddleDetails}>
-                <Text style={styles.bookingDateText}>Today, 10:00 AM</Text>
-                <Text style={styles.bookingDurationText}>2 Hours</Text>
-                <View style={styles.completedBadge}>
-                  <View style={styles.completedGreenDot} />
-                  <Text style={styles.completedBadgeText}>Completed</Text>
-                </View>
-              </View>
-
-              {/* Right Route Timeline */}
-              <View style={styles.bookingRouteContainer}>
-                <View style={styles.timelineRow}>
-                  <View style={[styles.timelineDot, { backgroundColor: '#00D2B4' }]} />
-                  <Text style={styles.timelineText} numberOfLines={1}>
-                    Home
-                  </Text>
-                </View>
-
-                <View style={styles.timelineLine} />
-
-                <View style={styles.timelineRow}>
-                  <View style={[styles.timelineDot, { backgroundColor: '#EF4444' }]} />
-                  <Text style={styles.timelineText} numberOfLines={1}>
-                    RS Puram, Coimbatore
-                  </Text>
-                </View>
-              </View>
-
-              <ChevronRight size={16} color="#94A3B8" strokeWidth={2.4} style={styles.bookingArrow} />
-            </View>
+            {recentBookings && recentBookings.length > 0 ? (
+              <RecentBookingCard
+                booking={recentBookings[0]}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  setActiveTab('history');
+                  router.push('/(customer)/trip-history');
+                }}
+              />
+            ) : (
+              <RecentBookingCard
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  setActiveTab('history');
+                  router.push('/(customer)/trip-history');
+                }}
+              />
+            )}
 
             {/* Bottom Padding */}
             <View style={{ height: 16 }} />
@@ -578,12 +589,7 @@ export default function CustomerHomeScreen() {
 const styles = StyleSheet.create({
   outerContainer: {
     flex: 1,
-    width: '100%',
-    height: '100%',
-    backgroundColor: '#0F172A',
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
   },
   appFrame: {
     width: '100%',
@@ -762,113 +768,6 @@ const styles = StyleSheet.create({
     gap: 10,
     marginBottom: 18,
   },
-  durationPill: {
-    width: 64,
-    height: 68,
-    borderRadius: 14,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1.2,
-    borderColor: '#EBF0F5',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
-  },
-  durationPillSelected: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#00D2B4',
-    borderWidth: 1.5,
-    shadowColor: '#00D2B4',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.18,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  durationIconCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#E6FAF6',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  durationIconCircleSelected: {
-    backgroundColor: '#E6FAF6',
-  },
-  durationLabel: {
-    fontFamily: FONT.medium,
-    fontSize: 11,
-    color: '#64748B',
-  },
-  durationLabelSelected: {
-    fontFamily: FONT.semiBold,
-    color: '#0E1E38',
-  },
-  locationCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 1.2,
-    borderColor: '#E2E8F0',
-    paddingHorizontal: 14,
-    paddingVertical: 4,
-    marginBottom: 16,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 9,
-  },
-  locationPinBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
-  },
-  locationInputWrapper: {
-    flex: 1,
-  },
-  locationLabel: {
-    fontFamily: FONT.semiBold,
-    fontSize: 12.5,
-    color: '#0E1E38',
-    marginBottom: 1,
-  },
-  dropLabelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 1,
-  },
-  optionalLabel: {
-    fontFamily: FONT.regular,
-    fontSize: 11.5,
-    color: '#64748B',
-  },
-  locationTextInput: {
-    fontFamily: FONT.medium,
-    fontSize: 12.5,
-    color: '#0E1E38',
-    padding: 0,
-    ...(Platform.OS === 'web'
-      ? ({
-          outlineStyle: 'none',
-          outlineWidth: 0,
-        } as any)
-      : {}),
-  },
-  locateButton: {
-    padding: 6,
-  },
-  locationDivider: {
-    height: 1,
-    backgroundColor: '#F1F5F9',
-    marginLeft: 42,
-  },
   bookButtonWrapper: {
     borderRadius: 26,
     shadowColor: '#00D2B4',
@@ -891,173 +790,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#072038',
   },
-  featuresRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 2,
-    marginBottom: 24,
-  },
-  featureItem: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  featureDivider: {
-    width: 1,
-    height: 32,
-    backgroundColor: '#EDF2F7',
-  },
-  featureIconBadge: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: '#E6FAF6',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 5,
-  },
-  featureTitle: {
-    fontFamily: FONT.semiBold,
-    fontSize: 10.5,
-    color: '#0E1E38',
-    textAlign: 'center',
-    lineHeight: 13.5,
-  },
   savedPlacesScrollContainer: {
     flexDirection: 'row',
     gap: 10,
     paddingBottom: 4,
     marginBottom: 20,
-  },
-  savedPlaceCard: {
-    width: 118,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    borderWidth: 1.2,
-    borderColor: '#E2E8F0',
-    padding: 12,
-    alignItems: 'flex-start',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 4,
-    elevation: 2,
-    flexShrink: 0,
-  },
-  savedPlaceIconBadge: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: '#E6FAF6',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  savedPlaceTitle: {
-    fontFamily: FONT.bold,
-    fontSize: 12.5,
-    color: '#0E1E38',
-    marginBottom: 2,
-  },
-  savedPlaceAddress: {
-    fontFamily: FONT.regular,
-    fontSize: 10,
-    color: '#64748B',
-    lineHeight: 13,
-  },
-  recentBookingCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    borderWidth: 1.2,
-    borderColor: '#E2E8F0',
-    padding: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 4,
-    elevation: 2,
-    marginBottom: 10,
-  },
-  bookingCarThumbnailWrapper: {
-    width: 58,
-    height: 42,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
-    overflow: 'hidden',
-  },
-  bookingCarThumbnail: {
-    width: '95%',
-    height: '95%',
-  },
-  bookingMiddleDetails: {
-    flex: 1.1,
-  },
-  bookingDateText: {
-    fontFamily: FONT.bold,
-    fontSize: 12,
-    color: '#0E1E38',
-    marginBottom: 2,
-  },
-  bookingDurationText: {
-    fontFamily: FONT.regular,
-    fontSize: 10.5,
-    color: '#64748B',
-    marginBottom: 4,
-  },
-  completedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: '#ECFDF5',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    gap: 4,
-  },
-  completedGreenDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    backgroundColor: '#10B981',
-  },
-  completedBadgeText: {
-    fontFamily: FONT.semiBold,
-    fontSize: 10,
-    color: '#10B981',
-  },
-  bookingRouteContainer: {
-    flex: 1.3,
-    paddingLeft: 4,
-  },
-  timelineRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  timelineDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  timelineText: {
-    fontFamily: FONT.medium,
-    fontSize: 10.5,
-    color: '#0E1E38',
-  },
-  timelineLine: {
-    width: 1.5,
-    height: 8,
-    backgroundColor: '#CBD5E1',
-    marginLeft: 2.25,
-    marginVertical: 1,
-  },
-  bookingArrow: {
-    marginLeft: 6,
   },
   bottomTabBarContainer: {
     flexShrink: 0,
@@ -1110,5 +847,203 @@ const styles = StyleSheet.create({
     height: 5,
     borderRadius: 2.5,
     backgroundColor: '#000000',
+  },
+
+  // Desktop Layout Styles
+  desktopOuterContainer: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+    minHeight: '100%',
+  },
+  desktopBodyRow: {
+    flex: 1,
+    flexDirection: 'row',
+    minHeight: '100%',
+  },
+  desktopContentArea: {
+    flex: 1,
+    position: 'relative',
+    backgroundColor: '#F7FAFC',
+  },
+  topRightDots: {
+    position: 'absolute',
+    top: 40,
+    right: 28,
+    zIndex: 0,
+  },
+  bottomRightDots: {
+    position: 'absolute',
+    bottom: 40,
+    right: 28,
+    zIndex: 0,
+  },
+  dotGridContainer: {
+    flexDirection: 'column',
+    gap: 9,
+  },
+  dotGridRow: {
+    flexDirection: 'row',
+    gap: 9,
+  },
+  dotGridDot: {
+    width: 4.5,
+    height: 4.5,
+    borderRadius: 2.25,
+    backgroundColor: '#00D2B4',
+    opacity: 0.38,
+  },
+  desktopScroll: {
+    flex: 1,
+    zIndex: 1,
+  },
+  desktopScrollContent: {
+    paddingHorizontal: 28,
+    paddingVertical: 24,
+    alignItems: 'center',
+  },
+  desktopMainRow: {
+    maxWidth: 1400,
+    width: '100%',
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: 24,
+  },
+  desktopBookingCard: {
+    flex: 1,
+    maxWidth: 600,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    padding: 28,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#071226',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 16,
+    elevation: 3,
+  },
+  desktopPremiumBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#E6FAF6',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    alignSelf: 'flex-start',
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#C3F3EB',
+  },
+  desktopPremiumBadgeText: {
+    fontFamily: FONT.semiBold,
+    fontSize: 12,
+    color: '#00B89C',
+  },
+  desktopBookingTitle: {
+    fontFamily: FONT.bold,
+    fontSize: 32,
+    color: '#0E1E38',
+    letterSpacing: -0.6,
+    marginBottom: 8,
+  },
+  desktopBookingSubtitle: {
+    fontFamily: FONT.regular,
+    fontSize: 14,
+    color: '#64748B',
+    lineHeight: 21,
+    marginBottom: 24,
+  },
+  desktopDurationHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  desktopDurationTitle: {
+    fontFamily: FONT.bold,
+    fontSize: 14.5,
+    color: '#0E1E38',
+    marginLeft: 8,
+  },
+  desktopDurationGrid: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 20,
+  },
+  desktopBookButtonWrapper: {
+    marginTop: 10,
+    height: 52,
+    borderRadius: 26,
+    overflow: 'hidden',
+    shadowColor: '#00D2B4',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 14,
+    elevation: 6,
+    ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : {}),
+  },
+  desktopBookButton: {
+    height: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  desktopBookButtonText: {
+    fontFamily: FONT.bold,
+    fontSize: 16.5,
+    color: '#FFFFFF',
+  },
+  desktopHeroCard: {
+    flex: 1.35,
+    borderRadius: 22,
+    overflow: 'hidden',
+    position: 'relative',
+    minHeight: 560,
+    backgroundColor: '#EBF6FC',
+    justifyContent: 'space-between',
+  },
+  desktopHeroBgImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+    ...(Platform.OS === 'web'
+      ? ({
+          objectFit: 'cover',
+          objectPosition: '26% bottom',
+        } as any)
+      : {}),
+  },
+  desktopHeroTextContainer: {
+    paddingTop: 42,
+    paddingHorizontal: 38,
+    zIndex: 1,
+  },
+  desktopHeroTitleNavy: {
+    fontFamily: FONT.bold,
+    fontSize: 38,
+    color: '#0E1E38',
+    letterSpacing: -0.6,
+    lineHeight: 44,
+  },
+  desktopHeroTitleTeal: {
+    fontFamily: FONT.bold,
+    fontSize: 38,
+    color: '#00D2B4',
+    letterSpacing: -0.6,
+    lineHeight: 44,
+  },
+  desktopHeroSubtitle: {
+    fontFamily: FONT.regular,
+    fontSize: 14.5,
+    color: '#556987',
+    lineHeight: 22,
+    marginTop: 10,
+    maxWidth: 440,
   },
 });

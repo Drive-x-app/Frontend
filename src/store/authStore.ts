@@ -23,18 +23,32 @@ export const COUNTRIES: Country[] = [
 
 export const DEFAULT_COUNTRY: Country = COUNTRIES[0];
 
+export interface UserProfileData {
+  fullName: string;
+  email?: string;
+  city: string;
+  preferredLanguage: string;
+  avatarUrl?: string;
+}
+
 export interface AuthState {
   phoneNumber: string;
   selectedCountry: Country;
+  authMode: 'signin' | 'signup';
   isLoading: boolean;
   error: string | null;
   token: string | null;
   user: UserSummary | null;
+  hasProfile: boolean;
+  profile: UserProfileData | null;
 
   // Actions
   setPhoneNumber: (phone: string) => void;
   setSelectedCountry: (country: Country) => void;
+  setAuthMode: (mode: 'signin' | 'signup') => void;
   requestOtp: () => Promise<{ success: boolean; formattedPhone: string }>;
+  verifyOtp: (otp: string) => Promise<{ success: boolean; isNewUser?: boolean; error?: string }>;
+  completeProfile: (profileData: UserProfileData) => Promise<{ success: boolean; error?: string }>;
   setUserSession: (user: UserSummary, token: string) => void;
   setError: (error: string | null) => void;
   reset: () => void;
@@ -43,10 +57,13 @@ export interface AuthState {
 export const useAuthStore = create<AuthState>((set, get) => ({
   phoneNumber: '',
   selectedCountry: DEFAULT_COUNTRY,
+  authMode: 'signin',
   isLoading: false,
   error: null,
   token: null,
   user: null,
+  hasProfile: true, // Default to true for existing sign in, becomes false on sign up
+  profile: null,
 
   setPhoneNumber: (phone: string) => {
     // Only accept numeric input up to 10 digits
@@ -58,6 +75,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   setSelectedCountry: (country: Country) => {
     set({ selectedCountry: country });
+  },
+
+  setAuthMode: (mode: 'signin' | 'signup') => {
+    set({
+      authMode: mode,
+      error: null,
+      hasProfile: mode === 'signin',
+    });
   },
 
   requestOtp: async () => {
@@ -82,8 +107,89 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
+  verifyOtp: async (otp: string) => {
+    if (otp.length < 6) {
+      set({ error: 'Please enter a valid 6-digit verification code' });
+      return { success: false, error: 'Please enter a valid 6-digit verification code' };
+    }
+
+    set({ isLoading: true, error: null });
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      const { phoneNumber, selectedCountry, authMode, hasProfile } = get();
+      const formattedPhone = `${selectedCountry.dialCode} ${phoneNumber || '98765 43210'}`;
+
+      // Sign up mode requires completing profile
+      const isNewUser = authMode === 'signup' || !hasProfile;
+
+      const mockUser: UserSummary = {
+        id: 'usr_dx_' + Date.now(),
+        email: isNewUser ? '' : 'priya.sharma@example.com',
+        fullName: isNewUser ? '' : 'Priya Sharma',
+        phoneNumber: formattedPhone,
+        role: 'CUSTOMER',
+        createdAt: new Date().toISOString(),
+      };
+
+      set({
+        isLoading: false,
+        user: mockUser,
+        hasProfile: !isNewUser,
+        token: 'auth_token_' + Math.random().toString(36).substring(2),
+        error: null,
+      });
+
+      return { success: true, isNewUser };
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Invalid verification code';
+      set({ isLoading: false, error: message });
+      return { success: false, error: message };
+    }
+  },
+
+  completeProfile: async (profileData: UserProfileData) => {
+    if (!profileData.fullName.trim()) {
+      set({ error: 'Please enter your full name' });
+      return { success: false, error: 'Please enter your full name' };
+    }
+
+    set({ isLoading: true, error: null });
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      const { user } = get();
+
+      if (user) {
+        set({
+          user: {
+            ...user,
+            fullName: profileData.fullName.trim(),
+            email: profileData.email?.trim() || user.email,
+            avatarUrl: profileData.avatarUrl,
+          },
+          profile: profileData,
+          hasProfile: true,
+          isLoading: false,
+          error: null,
+        });
+      } else {
+        set({
+          profile: profileData,
+          hasProfile: true,
+          isLoading: false,
+          error: null,
+        });
+      }
+
+      return { success: true };
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to save profile';
+      set({ isLoading: false, error: message });
+      return { success: false, error: message };
+    }
+  },
+
   setUserSession: (user: UserSummary, token: string) => {
-    set({ user, token, error: null });
+    set({ user, token, hasProfile: true, error: null });
   },
 
   setError: (error: string | null) => {
@@ -94,10 +200,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({
       phoneNumber: '',
       selectedCountry: DEFAULT_COUNTRY,
+      authMode: 'signin',
       isLoading: false,
       error: null,
       token: null,
       user: null,
+      hasProfile: true,
+      profile: null,
     });
   },
 }));
