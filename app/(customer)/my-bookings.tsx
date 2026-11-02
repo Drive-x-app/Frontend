@@ -12,7 +12,6 @@ import {
   Platform,
   ActivityIndicator,
   RefreshControl,
-  Alert,
   Linking,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -99,6 +98,7 @@ export default function MyBookingsScreen() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [actionErrorMessage, setActionErrorMessage] = useState<string | null>(null);
 
   // Modals
   const [selectedBookingDetails, setSelectedBookingDetails] = useState<BookingDisplayItem | null>(null);
@@ -111,7 +111,7 @@ export default function MyBookingsScreen() {
     } else {
       setIsLoading(true);
     }
-    setErrorMessage(null);
+    setActionErrorMessage(null);
 
     try {
       const response = await bookingsApi.getBookings({
@@ -198,40 +198,19 @@ export default function MyBookingsScreen() {
           );
         }
 
-        if (Platform.OS === 'web') {
-          window.alert('Booking cancelled successfully.');
-        } else {
-          Alert.alert('Booking Cancelled', 'Your booking has been cancelled successfully.');
-        }
+        setErrorMessage(null);
       } catch (err: any) {
         const errorMsg =
           err?.response?.data?.message ||
           err?.message ||
           'Failed to cancel booking. Please try again.';
-        if (Platform.OS === 'web') {
-          window.alert(errorMsg);
-        } else {
-          Alert.alert('Cancellation Error', errorMsg);
-        }
+        setActionErrorMessage(errorMsg);
       } finally {
         setIsCancelling(false);
       }
     };
 
-    if (Platform.OS === 'web') {
-      if (window.confirm(`Are you sure you want to cancel booking ${item.bookingRef}?`)) {
-        executeCancel();
-      }
-    } else {
-      Alert.alert(
-        'Cancel Booking',
-        `Are you sure you want to cancel booking ${item.bookingRef}?`,
-        [
-          { text: 'Keep Booking', style: 'cancel' },
-          { text: 'Cancel Booking', style: 'destructive', onPress: executeCancel },
-        ]
-      );
-    }
+    void executeCancel();
   };
 
   const handleRebook = (item: BookingDisplayItem) => {
@@ -246,7 +225,7 @@ export default function MyBookingsScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     const target = phone || '+91 98765 43210';
     Linking.openURL(`tel:${target}`).catch(() => {
-      Alert.alert('Contact Driver', `Call assigned driver at ${target}`);
+      setActionErrorMessage(`Unable to open the phone app. Call the assigned driver at ${target}.`);
     });
   };
 
@@ -700,6 +679,9 @@ export default function MyBookingsScreen() {
                     <Text style={styles.dtPageSubtitle}>
                       View, manage, and track your active, scheduled, and past rides.
                     </Text>
+                    {actionErrorMessage ? (
+                      <Text style={{ color: '#DC2626', marginTop: 8 }}>{actionErrorMessage}</Text>
+                    ) : null}
                   </View>
                 </View>
 
@@ -846,6 +828,9 @@ export default function MyBookingsScreen() {
           <Text style={styles.pageSubtitle}>
             Manage your upcoming, active, and past rides.
           </Text>
+          {actionErrorMessage ? (
+            <Text style={{ color: '#DC2626', marginTop: 8 }}>{actionErrorMessage}</Text>
+          ) : null}
         </View>
 
         {/* Categories Horizontal Tabs */}

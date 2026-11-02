@@ -9,7 +9,6 @@ import {
   useWindowDimensions,
   Platform,
   Pressable,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -83,6 +82,7 @@ export default function CustomerHomeScreen() {
     windowWidth > 600 ||
     (Platform.OS === 'web' && typeof window !== 'undefined' && window.innerWidth > 600);
   const [isLocating, setIsLocating] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
 
   // Zustand state
   const selectedDurationId = useBookingStore((state) => state.selectedDurationId);
@@ -118,6 +118,7 @@ export default function CustomerHomeScreen() {
     if (isLocating) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     setIsLocating(true);
+    setLocationError(null);
 
     try {
       const result = await getCurrentLocation();
@@ -131,10 +132,12 @@ export default function CustomerHomeScreen() {
           address: geocodeResult.address,
         });
       } else {
-        Alert.alert('Location Unavailable', result.message);
+        setLocationError(result.message);
       }
-    } catch {
-      Alert.alert('Location Error', 'Unable to retrieve your current location. Please try again.');
+    } catch (error) {
+      setLocationError(
+        error instanceof Error ? error.message : 'Unable to retrieve your current location.'
+      );
     } finally {
       setIsLocating(false);
     }
@@ -251,6 +254,9 @@ export default function CustomerHomeScreen() {
                     onUseCurrentLocation={handleUseCurrentLocation}
                     variant="desktop"
                   />
+                  {locationError ? (
+                    <Text style={{ color: '#DC2626', marginTop: 8 }}>{locationError}</Text>
+                  ) : null}
 
                   {/* Book a Driver Action Button */}
                   <TouchableOpacity
@@ -382,6 +388,9 @@ export default function CustomerHomeScreen() {
               onPressDrop={() => router.push('/(customer)/select-location')}
               onUseCurrentLocation={handleUseCurrentLocation}
             />
+            {locationError ? (
+              <Text style={{ color: '#DC2626', marginTop: 8 }}>{locationError}</Text>
+            ) : null}
 
             {/* 4. Book a Driver Main Action Button */}
             <TouchableOpacity

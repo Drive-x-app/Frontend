@@ -23,6 +23,8 @@ import {
   Clock,
   Star,
   ChevronRight,
+  ChevronDown,
+  Check,
   Home as HomeIcon,
   Calendar,
   History,
@@ -43,6 +45,7 @@ import {
 } from '../../src/services/trip/tripHistoryData';
 
 type FilterTab = 'All Trips' | 'Completed' | 'Scheduled' | 'Cancelled';
+const FILTER_OPTIONS: FilterTab[] = ['All Trips', 'Completed', 'Scheduled', 'Cancelled'];
 
 /**
  * Decorative 6x6 dot matrix pattern component matching desktop reference design
@@ -83,6 +86,7 @@ export default function TripHistoryScreen() {
     activeTab === 'bookings' ? 'Scheduled' : 'All Trips'
   );
   const [selectedTripDetails, setSelectedTripDetails] = useState<TripHistoryItem | null>(null);
+  const [isFilterMenuVisible, setIsFilterMenuVisible] = useState(false);
 
   const fetchTrips = useCallback(async (isRefresh = false) => {
     if (isRefresh) {
@@ -141,7 +145,52 @@ export default function TripHistoryScreen() {
   const handleFilterSelect = (filter: FilterTab) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     setSelectedFilter(filter);
+    setIsFilterMenuVisible(false);
   };
+
+  const renderFilterMenu = () => (
+    <Modal
+      animationType="fade"
+      transparent
+      visible={isFilterMenuVisible}
+      onRequestClose={() => setIsFilterMenuVisible(false)}
+    >
+      <Pressable
+        style={styles.filterMenuOverlay}
+        onPress={() => setIsFilterMenuVisible(false)}
+      >
+        <Pressable
+          style={styles.filterMenuCard}
+          onPress={(event) => event.stopPropagation()}
+        >
+          <Text style={styles.filterMenuTitle}>Filter trips</Text>
+          {FILTER_OPTIONS.map((filter) => {
+            const isSelected = selectedFilter === filter;
+            return (
+              <TouchableOpacity
+                key={filter}
+                style={[styles.filterMenuOption, isSelected && styles.filterMenuOptionSelected]}
+                activeOpacity={0.75}
+                onPress={() => handleFilterSelect(filter)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: isSelected }}
+              >
+                <Text
+                  style={[
+                    styles.filterMenuOptionText,
+                    isSelected && styles.filterMenuOptionTextSelected,
+                  ]}
+                >
+                  {filter}
+                </Text>
+                {isSelected ? <Check size={18} color="#00A892" strokeWidth={2.5} /> : null}
+              </TouchableOpacity>
+            );
+          })}
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
 
   const handleViewDetails = (trip: TripHistoryItem) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -352,46 +401,45 @@ export default function TripHistoryScreen() {
                       activeOpacity={0.8}
                       onPress={() => {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                        const filters: FilterTab[] = ['All Trips', 'Completed', 'Scheduled', 'Cancelled'];
-                        const currentIndex = filters.indexOf(selectedFilter);
-                        setSelectedFilter(filters[(currentIndex + 1) % filters.length]);
+                        setIsFilterMenuVisible(true);
                       }}
                       accessibilityLabel="Filter trip history"
+                      accessibilityState={{ expanded: isFilterMenuVisible }}
                     >
                       <Filter size={13} color="#0E1E38" strokeWidth={2.4} />
                       <Text style={styles.dtFilterPillText}>Filter</Text>
+                      <ChevronDown size={14} color="#0E1E38" strokeWidth={2.2} />
                     </TouchableOpacity>
                   </View>
                 </View>
 
-                {/* 2. Filter Tabs Segmented Bar */}
                 <View style={styles.dtFilterTabsContainer}>
                   <View style={styles.dtFilterTabsBar}>
-                    {(['All Trips', 'Completed', 'Scheduled', 'Cancelled'] as FilterTab[]).map(
-                      (filter) => {
-                        const isSelected = selectedFilter === filter;
-                        return (
-                          <TouchableOpacity
-                            key={filter}
+                    {FILTER_OPTIONS.map((filter) => {
+                      const isSelected = selectedFilter === filter;
+                      return (
+                        <TouchableOpacity
+                          key={filter}
+                          style={[
+                            styles.dtFilterTabOption,
+                            isSelected && styles.dtFilterTabOptionActive,
+                          ]}
+                          activeOpacity={0.8}
+                          onPress={() => handleFilterSelect(filter)}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected: isSelected }}
+                        >
+                          <Text
                             style={[
-                              styles.dtFilterTabOption,
-                              isSelected && styles.dtFilterTabOptionActive,
+                              styles.dtFilterTabText,
+                              isSelected && styles.dtFilterTabTextActive,
                             ]}
-                            activeOpacity={0.8}
-                            onPress={() => handleFilterSelect(filter)}
                           >
-                            <Text
-                              style={[
-                                styles.dtFilterTabText,
-                                isSelected && styles.dtFilterTabTextActive,
-                              ]}
-                            >
-                              {filter}
-                            </Text>
-                          </TouchableOpacity>
-                        );
-                      }
-                    )}
+                            {filter}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
                   </View>
                 </View>
 
@@ -543,6 +591,7 @@ export default function TripHistoryScreen() {
 
         {/* Modal */}
         {renderTripDetailsModal()}
+        {renderFilterMenu()}
       </View>
     );
   }
@@ -591,14 +640,14 @@ export default function TripHistoryScreen() {
               activeOpacity={0.8}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                const filters: FilterTab[] = ['All Trips', 'Completed', 'Scheduled', 'Cancelled'];
-                const currentIndex = filters.indexOf(selectedFilter);
-                setSelectedFilter(filters[(currentIndex + 1) % filters.length]);
+                setIsFilterMenuVisible(true);
               }}
               accessibilityLabel="Filter trip history"
+              accessibilityState={{ expanded: isFilterMenuVisible }}
             >
               <Filter size={13} color="#0E1E38" strokeWidth={2.4} />
               <Text style={styles.filterPillText}>Filter</Text>
+              <ChevronDown size={14} color="#0E1E38" strokeWidth={2.2} />
             </TouchableOpacity>
           </View>
           <Text style={styles.pageSubtitle}>
@@ -606,34 +655,33 @@ export default function TripHistoryScreen() {
           </Text>
         </View>
 
-        {/* Filter Tabs Segmented Bar */}
         <View style={styles.filterTabsContainer}>
           <View style={styles.filterTabsBar}>
-            {(['All Trips', 'Completed', 'Scheduled', 'Cancelled'] as FilterTab[]).map(
-              (filter) => {
-                const isSelected = selectedFilter === filter;
-                return (
-                  <TouchableOpacity
-                    key={filter}
+            {FILTER_OPTIONS.map((filter) => {
+              const isSelected = selectedFilter === filter;
+              return (
+                <TouchableOpacity
+                  key={filter}
+                  style={[
+                    styles.filterTabOption,
+                    isSelected && styles.filterTabOptionActive,
+                  ]}
+                  activeOpacity={0.8}
+                  onPress={() => handleFilterSelect(filter)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isSelected }}
+                >
+                  <Text
                     style={[
-                      styles.filterTabOption,
-                      isSelected && styles.filterTabOptionActive,
+                      styles.filterTabText,
+                      isSelected && styles.filterTabTextActive,
                     ]}
-                    activeOpacity={0.8}
-                    onPress={() => handleFilterSelect(filter)}
                   >
-                    <Text
-                      style={[
-                        styles.filterTabText,
-                        isSelected && styles.filterTabTextActive,
-                      ]}
-                    >
-                      {filter}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              }
-            )}
+                    {filter}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
 
@@ -916,6 +964,7 @@ export default function TripHistoryScreen() {
 
       {/* Trip Details Modal */}
       {renderTripDetailsModal()}
+      {renderFilterMenu()}
     </View>
   );
 }
@@ -1047,33 +1096,6 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     color: '#0E1E38',
   },
-  dtBrandCenter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  dtLogoEmblem: {
-    width: 32,
-    height: 20,
-  },
-  brandTextRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  brandTextNavy: {
-    fontFamily: FONT.bold,
-    fontSize: 18,
-    color: '#0E1E38',
-    letterSpacing: -0.4,
-  },
-  brandTextTeal: {
-    fontFamily: FONT.bold,
-    fontSize: 18,
-    color: '#00D2B4',
-    letterSpacing: -0.4,
-  },
-
-  /* Desktop Filter Segmented Tabs */
   dtFilterTabsContainer: {
     marginBottom: 24,
   },
@@ -1108,6 +1130,79 @@ const styles = StyleSheet.create({
   dtFilterTabTextActive: {
     fontFamily: FONT.bold,
     color: '#0E1E38',
+  },
+  filterMenuOverlay: {
+    flex: 1,
+    alignItems: 'flex-end',
+    paddingTop: 118,
+    paddingHorizontal: 20,
+    backgroundColor: 'rgba(14, 30, 56, 0.18)',
+  },
+  filterMenuCard: {
+    width: 220,
+    padding: 8,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E8EDF4',
+    shadowColor: '#071226',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.16,
+    shadowRadius: 18,
+    elevation: 8,
+  },
+  filterMenuTitle: {
+    paddingHorizontal: 10,
+    paddingTop: 6,
+    paddingBottom: 8,
+    color: '#7383A1',
+    fontFamily: FONT.medium,
+    fontSize: 12,
+  },
+  filterMenuOption: {
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 10,
+    borderRadius: 9,
+  },
+  filterMenuOptionSelected: {
+    backgroundColor: '#EAFBF7',
+  },
+  filterMenuOptionText: {
+    color: '#173A72',
+    fontFamily: FONT.medium,
+    fontSize: 14,
+  },
+  filterMenuOptionTextSelected: {
+    color: '#008D79',
+    fontFamily: FONT.semiBold,
+  },
+  dtBrandCenter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  dtLogoEmblem: {
+    width: 32,
+    height: 20,
+  },
+  brandTextRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  brandTextNavy: {
+    fontFamily: FONT.bold,
+    fontSize: 18,
+    color: '#0E1E38',
+    letterSpacing: -0.4,
+  },
+  brandTextTeal: {
+    fontFamily: FONT.bold,
+    fontSize: 18,
+    color: '#00D2B4',
+    letterSpacing: -0.4,
   },
 
   /* Desktop Trip Cards List */

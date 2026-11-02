@@ -10,7 +10,6 @@ import {
   useWindowDimensions,
   Platform,
   Switch,
-  Alert,
   ActivityIndicator,
   Modal,
   Pressable,
@@ -87,6 +86,7 @@ export default function EditProfileScreen() {
   // Status state
   const [isSaving, setIsSaving] = useState(false);
   const [isLangModalOpen, setIsLangModalOpen] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const handleBack = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -99,14 +99,11 @@ export default function EditProfileScreen() {
 
   const handleSave = async () => {
     if (!fullName.trim()) {
-      if (Platform.OS === 'web') {
-        window.alert('Please enter your full name');
-      } else {
-        Alert.alert('Required Field', 'Please enter your full name');
-      }
+      setFormError('Please enter your full name.');
       return;
     }
 
+    setFormError(null);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     setIsSaving(true);
 
@@ -130,19 +127,11 @@ export default function EditProfileScreen() {
         preferredLanguage,
       });
 
-      if (Platform.OS === 'web') {
-        window.alert('Profile updated successfully!');
-      } else {
-        Alert.alert('Success', 'Profile updated successfully!');
-      }
-
       router.replace('/(customer)/profile');
-    } catch {
-      if (Platform.OS === 'web') {
-        window.alert('Failed to update profile. Please try again.');
-      } else {
-        Alert.alert('Error', 'Failed to update profile. Please try again.');
-      }
+    } catch (error) {
+      setFormError(
+        error instanceof Error ? error.message : 'Failed to update profile. Please try again.'
+      );
     } finally {
       setIsSaving(false);
     }
@@ -156,6 +145,9 @@ export default function EditProfileScreen() {
         <Text style={styles.pageTitle}>Edit Profile</Text>
         <Text style={styles.pageSubtitle}>Keep your information up to date.</Text>
       </View>
+      {formError ? (
+        <Text style={{ color: '#DC2626', marginBottom: 12 }}>{formError}</Text>
+      ) : null}
 
       {/* 2. Profile Photo Card */}
       <View style={styles.card}>

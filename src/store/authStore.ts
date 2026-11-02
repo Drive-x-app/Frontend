@@ -62,7 +62,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   error: null,
   token: null,
   user: null,
-  hasProfile: true, // Default to true for existing sign in, becomes false on sign up
+  hasProfile: false,
   profile: null,
 
   setPhoneNumber: (phone: string) => {
@@ -81,7 +81,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({
       authMode: mode,
       error: null,
-      hasProfile: mode === 'signin',
     });
   },
 
@@ -116,11 +115,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       await new Promise((resolve) => setTimeout(resolve, 800));
-      const { phoneNumber, selectedCountry, authMode, hasProfile } = get();
+      const { phoneNumber, selectedCountry, authMode } = get();
       const formattedPhone = `${selectedCountry.dialCode} ${phoneNumber || '98765 43210'}`;
 
-      // Sign up mode requires completing profile
-      const isNewUser = authMode === 'signup' || !hasProfile;
+      const isNewUser = authMode === 'signup';
 
       const mockUser: UserSummary = {
         id: 'usr_dx_' + Date.now(),
@@ -205,7 +203,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       error: null,
       token: null,
       user: null,
-      hasProfile: true,
+      hasProfile: false,
       profile: null,
     });
   },

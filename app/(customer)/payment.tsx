@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  ActivityIndicator,
   View,
   Text,
   StyleSheet,
@@ -35,6 +36,7 @@ import {
   useBookingStore,
   DURATION_OPTIONS,
 } from '../../src/store/bookingStore';
+import { bookingsApi } from '../../src/services/api/bookingsApi';
 import { DesktopHeader } from '../../src/components/common/DesktopHeader';
 import { DesktopSidebar } from '../../src/components/common/DesktopSidebar';
 import { FONT } from '../../src/theme/typography';
@@ -71,6 +73,7 @@ export default function ChoosePaymentScreen() {
   const selectedDurationId = useBookingStore((state) => state.selectedDurationId);
   const selectedDate = useBookingStore((state) => state.selectedDate);
   const selectedTime = useBookingStore((state) => state.selectedTime);
+  const pickupTimingMode = useBookingStore((state) => state.pickupTimingMode);
 
   const selectedDuration =
     DURATION_OPTIONS.find((d) => d.id === selectedDurationId) ||
@@ -82,6 +85,8 @@ export default function ChoosePaymentScreen() {
 
   // Selected Payment Method State
   const [selectedMethod, setSelectedMethod] = useState<'visa' | 'mastercard' | 'upi' | 'card' | 'netbanking'>('visa');
+  const [isPaying, setIsPaying] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
 
   // Format Date string: "2026-10-29" -> "Thu, 29 Oct 2026"
   const formatDisplayDate = (dateStr: string) => {
@@ -132,9 +137,33 @@ export default function ChoosePaymentScreen() {
     setSelectedMethod(method);
   };
 
-  const handlePay = () => {
+  const handlePay = async () => {
+    if (isPaying) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
-    router.push('/(customer)/booking-confirmed');
+    setIsPaying(true);
+    setPaymentError(null);
+    try {
+      const booking = await bookingsApi.createBooking({
+        durationId: selectedDurationId,
+        pickupLocation: pickupLocation.trim(),
+        ...(dropLocation.trim() ? { dropLocation: dropLocation.trim() } : {}),
+        timingMode: pickupTimingMode,
+        ...(pickupTimingMode === 'later'
+          ? { pickupDate: selectedDate, pickupTime: selectedTime }
+          : {}),
+        paymentMethod: selectedMethod === 'upi' ? 'UPI' : 'CARD',
+      });
+      router.push({
+        pathname: '/(customer)/booking-confirmed',
+        params: { bookingId: booking.id },
+      });
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to save your booking. Please try again.';
+      setPaymentError(message);
+    } finally {
+      setIsPaying(false);
+    }
   };
 
   // =========================================================================
@@ -174,6 +203,9 @@ export default function ChoosePaymentScreen() {
                     <Text style={styles.dtPageSubtitle}>
                       Make a secure payment to confirm your booking.
                     </Text>
+                    {paymentError ? (
+                      <Text style={{ color: '#DC2626', marginTop: 8 }}>{paymentError}</Text>
+                    ) : null}
                   </View>
                 </View>
 
@@ -394,10 +426,17 @@ export default function ChoosePaymentScreen() {
                   style={styles.dtPayButton}
                   activeOpacity={0.88}
                   onPress={handlePay}
+                  disabled={isPaying}
                   accessibilityLabel={`Pay ${estimatedFare}`}
                 >
-                  <Text style={styles.dtPayButtonText}>Pay ₹ {estimatedFare}</Text>
-                  <ArrowRight size={18} color="#FFFFFF" strokeWidth={2.4} />
+                  {isPaying ? (
+                    <ActivityIndicator color="#FFFFFF" />
+                  ) : (
+                    <>
+                      <Text style={styles.dtPayButtonText}>Pay ₹ {estimatedFare}</Text>
+                      <ArrowRight size={18} color="#FFFFFF" strokeWidth={2.4} />
+                    </>
+                  )}
                 </TouchableOpacity>
               </View>
             </ScrollView>
@@ -450,6 +489,9 @@ export default function ChoosePaymentScreen() {
             <Text style={styles.pageSubtitle}>
               Make a secure payment to confirm your booking.
             </Text>
+            {paymentError ? (
+              <Text style={{ color: '#DC2626', marginTop: 8 }}>{paymentError}</Text>
+            ) : null}
           </View>
 
           {/* Scrollable Content */}
@@ -712,6 +754,7 @@ export default function ChoosePaymentScreen() {
               style={styles.payButtonWrapper}
               activeOpacity={0.88}
               onPress={handlePay}
+              disabled={isPaying}
             >
               <LinearGradient
                 colors={['#00E5C4', '#00D2B4']}
@@ -719,10 +762,16 @@ export default function ChoosePaymentScreen() {
                 end={{ x: 1, y: 1 }}
                 style={styles.payButton}
               >
-                <Text style={styles.payButtonText}>
-                  Pay ₹ {estimatedFare.toLocaleString('en-IN')}
-                </Text>
-                <ArrowRight size={18} color="#072038" strokeWidth={2.6} />
+                {isPaying ? (
+                  <ActivityIndicator color="#072038" />
+                ) : (
+                  <>
+                    <Text style={styles.payButtonText}>
+                      Pay ₹ {estimatedFare.toLocaleString('en-IN')}
+                    </Text>
+                    <ArrowRight size={18} color="#072038" strokeWidth={2.6} />
+                  </>
+                )}
               </LinearGradient>
             </TouchableOpacity>
 

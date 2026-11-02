@@ -8,7 +8,6 @@ import {
   Image,
   useWindowDimensions,
   Platform,
-  Alert,
   Modal,
   Pressable,
   TextInput,
@@ -95,6 +94,7 @@ export default function TripInProgressScreen() {
   const [driverVehicle] = useState('White Toyota Etios');
   const [driverPlate] = useState('TN 38 AB 1234');
   const [driverPhone] = useState('+91 98765 43210');
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
 
   // Locations
   const pickupLocation = pickupLocationStore || '123, Anna Nagar, Coimbatore';
@@ -148,7 +148,6 @@ export default function TripInProgressScreen() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isSupportOpen, setIsSupportOpen] = useState(false);
   const [isSosOpen, setIsSosOpen] = useState(false);
-  const [isEndTripModalOpen, setIsEndTripModalOpen] = useState(false);
   const [chatInput, setChatInput] = useState('');
   const [chatMessages, setChatMessages] = useState([
     {
@@ -177,24 +176,24 @@ export default function TripInProgressScreen() {
   const handleCallDriver = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     const cleanNumber = driverPhone.replace(/\s+/g, '');
-    Linking.openURL(`tel:${cleanNumber}`).catch(() => {
-      if (Platform.OS === 'web') {
-        window.alert(`Calling driver Ramesh Kumar at ${driverPhone}`);
-      } else {
-        Alert.alert('Calling Driver', `Dialing ${driverPhone}...`);
-      }
+    Linking.openURL(`tel:${cleanNumber}`).catch((error: unknown) => {
+      setActionMessage(
+        error instanceof Error
+          ? `Unable to open the phone app. Call the driver at ${driverPhone}.`
+          : `Call the driver at ${driverPhone}.`
+      );
     });
   };
 
   const handleCallSupport = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     const supportPhone = '+918000012345';
-    Linking.openURL(`tel:${supportPhone}`).catch(() => {
-      if (Platform.OS === 'web') {
-        window.alert('DriverX 24/7 Priority Support: 1800-425-9999');
-      } else {
-        Alert.alert('DriverX Priority Support', 'Connecting to 24/7 Support Desk...');
-      }
+    Linking.openURL(`tel:${supportPhone}`).catch((error: unknown) => {
+      setActionMessage(
+        error instanceof Error
+          ? `Unable to open the phone app. Call DriverX support at 1800-425-9999.`
+          : 'Call DriverX support at 1800-425-9999.'
+      );
     });
   };
 
@@ -231,16 +230,6 @@ export default function TripInProgressScreen() {
 
   const handleConfirmEndTrip = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-    setIsEndTripModalOpen(false);
-
-    if (Platform.OS === 'web') {
-      window.alert('Trip completed early! Fare has been recalculated based on 1h 20m elapsed.');
-    } else {
-      Alert.alert(
-        'Trip Completed Early',
-        'Your trip has been ended successfully. Fare has been adjusted.'
-      );
-    }
     router.replace('/(customer)/my-bookings');
   };
 
@@ -252,6 +241,9 @@ export default function TripInProgressScreen() {
         <Text style={styles.pageTitle}>Trip in Progress</Text>
         <Text style={styles.pageSubtitle}>Your ride is currently in progress.</Text>
       </View>
+      {actionMessage ? (
+        <Text style={{ color: '#DC2626', marginBottom: 12 }}>{actionMessage}</Text>
+      ) : null}
 
       {/* 2. Map Section with Live Overlays */}
       <View style={styles.mapContainer}>
@@ -523,7 +515,7 @@ export default function TripInProgressScreen() {
       <TouchableOpacity
         style={styles.endTripEarlyButton}
         activeOpacity={0.85}
-        onPress={() => setIsEndTripModalOpen(true)}
+        onPress={handleConfirmEndTrip}
       >
         <Pause size={15} color="#0E1E38" strokeWidth={2.8} />
         <Text style={styles.endTripEarlyButtonText}>End Trip Early</Text>
@@ -718,13 +710,19 @@ export default function TripInProgressScreen() {
             onPress={async () => {
               const liveLink = `https://driverx.app/track/dx-${Date.now().toString().slice(-6)}`;
               const msg = `🚨 EMERGENCY: I am currently on a DriverX trip. Live GPS location: ${liveLink}`;
-              if (Platform.OS === 'web') {
-                if (navigator.clipboard) {
+              try {
+                if (Platform.OS === 'web') {
+                  if (!navigator.clipboard) {
+                    throw new Error('Clipboard access is unavailable in this browser.');
+                  }
                   await navigator.clipboard.writeText(msg);
-                  window.alert('Emergency location copied to clipboard!');
+                } else {
+                  await Share.share({ message: msg });
                 }
-              } else {
-                await Share.share({ message: msg });
+              } catch (error) {
+                setActionMessage(
+                  error instanceof Error ? error.message : 'Unable to share your location.'
+                );
               }
             }}
           >
@@ -739,53 +737,6 @@ export default function TripInProgressScreen() {
           >
             <Text style={styles.supportActionDismissBtnText}>Dismiss</Text>
           </TouchableOpacity>
-        </View>
-      </View>
-    </Modal>
-  );
-
-  // End Trip Early Confirmation Modal
-  const renderEndTripEarlyModal = () => (
-    <Modal
-      visible={isEndTripModalOpen}
-      transparent={true}
-      animationType="fade"
-      onRequestClose={() => setIsEndTripModalOpen(false)}
-    >
-      <View style={styles.modalBackdrop}>
-        <Pressable style={styles.modalBackdropDismiss} onPress={() => setIsEndTripModalOpen(false)} />
-        <View style={styles.endTripModalCard}>
-          <View style={styles.endTripIconCircle}>
-            <Pause size={26} color="#0E1E38" strokeWidth={2.6} />
-          </View>
-          <Text style={styles.endTripModalTitle}>End Trip Early?</Text>
-          <Text style={styles.endTripModalSubtitle}>
-            Your ride has been active for {formatHourMin(elapsedMinutes)} of your {totalDurationHours}-hour rental.
-            Ending now will adjust your final fare based on actual completed time.
-          </Text>
-
-          <View style={styles.endTripSummaryPill}>
-            <Text style={styles.endTripSummaryPillLabel}>Estimated Adjusted Fare</Text>
-            <Text style={styles.endTripSummaryPillVal}>₹ {Math.round(450 * (elapsedMinutes / 60))}</Text>
-          </View>
-
-          <View style={styles.endTripModalActionsRow}>
-            <TouchableOpacity
-              style={styles.endTripKeepRidingBtn}
-              activeOpacity={0.8}
-              onPress={() => setIsEndTripModalOpen(false)}
-            >
-              <Text style={styles.endTripKeepRidingBtnText}>Keep Riding</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.endTripConfirmBtn}
-              activeOpacity={0.88}
-              onPress={handleConfirmEndTrip}
-            >
-              <Text style={styles.endTripConfirmBtnText}>End Trip</Text>
-            </TouchableOpacity>
-          </View>
         </View>
       </View>
     </Modal>
@@ -880,7 +831,6 @@ export default function TripInProgressScreen() {
         {renderChatModal()}
         {renderSupportModal()}
         {renderSosModal()}
-        {renderEndTripEarlyModal()}
       </View>
     );
   }
@@ -939,7 +889,6 @@ export default function TripInProgressScreen() {
       {renderChatModal()}
       {renderSupportModal()}
       {renderSosModal()}
-      {renderEndTripEarlyModal()}
     </SafeAreaView>
   );
 }
@@ -1815,94 +1764,6 @@ const styles = StyleSheet.create({
     fontSize: 13.5,
     color: '#0E1E38',
     marginLeft: 8,
-  },
-
-  // End Trip Early Modal
-  endTripModalCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    marginHorizontal: 20,
-    marginBottom: 'auto',
-    marginTop: 'auto',
-    padding: 24,
-    alignItems: 'center',
-  },
-  endTripIconCircle: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: '#F1F5F9',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 14,
-  },
-  endTripModalTitle: {
-    fontFamily: FONT.bold,
-    fontSize: 18,
-    color: '#0E1E38',
-    marginBottom: 6,
-  },
-  endTripModalSubtitle: {
-    fontFamily: FONT.regular,
-    fontSize: 13,
-    color: '#64748B',
-    textAlign: 'center',
-    lineHeight: 19,
-    marginBottom: 16,
-  },
-  endTripSummaryPill: {
-    width: '100%',
-    backgroundColor: '#F8FAFC',
-    borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  endTripSummaryPillLabel: {
-    fontFamily: FONT.medium,
-    fontSize: 13,
-    color: '#64748B',
-  },
-  endTripSummaryPillVal: {
-    fontFamily: FONT.bold,
-    fontSize: 16,
-    color: '#0E1E38',
-  },
-  endTripModalActionsRow: {
-    flexDirection: 'row',
-    width: '100%',
-    gap: 12,
-  },
-  endTripKeepRidingBtn: {
-    flex: 1,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: '#F1F5F9',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  endTripKeepRidingBtnText: {
-    fontFamily: FONT.semiBold,
-    fontSize: 13.5,
-    color: '#0E1E38',
-  },
-  endTripConfirmBtn: {
-    flex: 1,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: '#EF4444',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  endTripConfirmBtnText: {
-    fontFamily: FONT.semiBold,
-    fontSize: 13.5,
-    color: '#FFFFFF',
   },
 
   // Desktop Responsive

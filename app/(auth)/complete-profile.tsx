@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -15,7 +15,6 @@ import {
   ScrollView,
   Modal,
   FlatList,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -32,11 +31,14 @@ import {
   Info,
   Check,
   X,
+  Search,
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
+import { City } from 'country-state-city';
 import { useAuthStore } from '../../src/store/authStore';
+import { useBookingStore } from '../../src/store/bookingStore';
 import { FONT } from '../../src/theme/typography';
 
 const POPULAR_CITIES = [
@@ -51,6 +53,10 @@ const POPULAR_CITIES = [
   'Mumbai',
   'Delhi NCR',
 ];
+
+const ALL_CITIES = Array.from(new Set(City.getAllCities().map((city) => city.name))).sort(
+  (first, second) => first.localeCompare(second)
+);
 
 const LANGUAGES = [
   { label: 'English', sub: 'English' },
@@ -71,6 +77,7 @@ export default function CompleteProfileScreen() {
   const completeProfile = useAuthStore((state) => state.completeProfile);
   const isLoading = useAuthStore((state) => state.isLoading);
   const storeError = useAuthStore((state) => state.error);
+  const setActiveTab = useBookingStore((state) => state.setActiveTab);
 
   // Form State
   const [fullName, setFullName] = useState('');
@@ -81,9 +88,20 @@ export default function CompleteProfileScreen() {
 
   // Modals & Active focus
   const [isCityModalVisible, setIsCityModalVisible] = useState(false);
+  const [citySearchQuery, setCitySearchQuery] = useState('');
   const [isLanguageModalVisible, setIsLanguageModalVisible] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [photoMessage, setPhotoMessage] = useState<string | null>(null);
+
+  const filteredCities = useMemo(() => {
+    const query = citySearchQuery.trim().toLowerCase();
+    if (!query) {
+      return POPULAR_CITIES;
+    }
+
+    return ALL_CITIES.filter((city) => city.toLowerCase().startsWith(query));
+  }, [citySearchQuery]);
 
   const handleBack = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -99,10 +117,7 @@ export default function CompleteProfileScreen() {
     try {
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permissionResult.granted) {
-        Alert.alert(
-          'Permission Required',
-          'Please allow media access to upload your profile photo.'
-        );
+        setPhotoMessage('Please allow media access to upload your profile photo.');
         return;
       }
 
@@ -115,9 +130,12 @@ export default function CompleteProfileScreen() {
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         setAvatarUri(result.assets[0].uri);
+        setPhotoMessage(null);
       }
-    } catch {
-      // Fallback
+    } catch (error) {
+      setPhotoMessage(
+        error instanceof Error ? error.message : 'Unable to select a profile photo.'
+      );
     }
   };
 
@@ -141,15 +159,15 @@ export default function CompleteProfileScreen() {
 
     if (result.success) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      setActiveTab('home');
       router.replace('/(customer)');
     }
   };
 
   const showInfoNotice = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    Alert.alert(
-      'Profile Photo Guidelines',
-      'A clear, friendly face photo helps your drivers recognize and identify you seamlessly at pickup locations.'
+    setPhotoMessage(
+      'A clear, friendly face photo helps your drivers recognize you at pickup locations.'
     );
   };
 
@@ -218,6 +236,7 @@ export default function CompleteProfileScreen() {
           </TouchableOpacity>
         </View>
       </View>
+      {photoMessage ? <Text style={styles.fieldErrorText}>{photoMessage}</Text> : null}
 
       {/* Form Fields */}
       <View style={styles.formSection}>
@@ -287,6 +306,7 @@ export default function CompleteProfileScreen() {
             activeOpacity={0.75}
             onPress={() => {
               Keyboard.dismiss();
+              setCitySearchQuery('');
               setIsCityModalVisible(true);
             }}
           >
@@ -422,9 +442,34 @@ export default function CompleteProfileScreen() {
                       <X size={20} color="#0E1E38" />
                     </TouchableOpacity>
                   </View>
+                  <View style={styles.citySearchInput}>
+                    <Search size={18} color="#94A3B8" strokeWidth={2} />
+                    <TextInput
+                      style={styles.citySearchText}
+                      placeholder="Search cities"
+                      placeholderTextColor="#94A3B8"
+                      value={citySearchQuery}
+                      onChangeText={setCitySearchQuery}
+                      autoCapitalize="words"
+                      autoCorrect={false}
+                      accessibilityLabel="Search cities"
+                    />
+                    {citySearchQuery.length > 0 ? (
+                      <TouchableOpacity
+                        onPress={() => setCitySearchQuery('')}
+                        accessibilityLabel="Clear city search"
+                      >
+                        <X size={17} color="#94A3B8" />
+                      </TouchableOpacity>
+                    ) : null}
+                  </View>
                   <FlatList
-                    data={POPULAR_CITIES}
+                    data={filteredCities}
                     keyExtractor={(item) => item}
+                    keyboardShouldPersistTaps="handled"
+                    ListEmptyComponent={
+                      <Text style={styles.noCitiesText}>No cities found.</Text>
+                    }
                     renderItem={({ item }) => {
                       const isSelected = item === selectedCity;
                       return (
@@ -432,6 +477,7 @@ export default function CompleteProfileScreen() {
                           style={[styles.modalItem, isSelected && styles.modalItemSelected]}
                           onPress={() => {
                             setSelectedCity(item);
+                            setCitySearchQuery('');
                             setIsCityModalVisible(false);
                             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
                           }}
@@ -841,6 +887,33 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
     marginBottom: 8,
+  },
+  citySearchInput: {
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+  },
+  citySearchText: {
+    flex: 1,
+    minWidth: 0,
+    paddingVertical: 8,
+    color: '#0E1E38',
+    fontFamily: FONT.regular,
+    fontSize: 14,
+  },
+  noCitiesText: {
+    paddingVertical: 20,
+    color: '#64748B',
+    textAlign: 'center',
+    fontFamily: FONT.regular,
+    fontSize: 13,
   },
   modalTitle: {
     fontFamily: FONT.bold,

@@ -36,6 +36,16 @@ export interface QueryBookingsParams {
   userId?: string;
 }
 
+export interface CreateBookingParams {
+  durationId: string;
+  pickupLocation: string;
+  dropLocation?: string;
+  timingMode?: 'now' | 'later';
+  pickupDate?: string;
+  pickupTime?: string;
+  paymentMethod?: 'CASH' | 'CARD' | 'WALLET' | 'UPI';
+}
+
 export const bookingsApi = {
   /**
    * GET /api/v1/bookings
@@ -56,6 +66,15 @@ export const bookingsApi = {
     const response = await apiClient.get<BackendBookingItem>(`/bookings/${id}`, {
       params: userId ? { userId } : undefined,
     });
+    return response.data;
+  },
+
+  /**
+   * POST /api/v1/bookings
+   * Persists a paid booking so it appears in the customer's history.
+   */
+  createBooking: async (params: CreateBookingParams): Promise<BackendBookingItem> => {
+    const response = await apiClient.post<BackendBookingItem>('/bookings', params);
     return response.data;
   },
 

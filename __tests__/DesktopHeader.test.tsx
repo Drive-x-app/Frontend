@@ -29,7 +29,7 @@ jest.mock('expo-haptics', () => ({
 }));
 
 describe('DesktopHeader Component', () => {
-  it('renders the brand logo and profile without header page tabs', async () => {
+  it('renders the brand logo and notifications button without profile dropdown or drawer', async () => {
     const { getByText, getByLabelText, queryByLabelText } = await render(
       <DesktopHeader activeTab="home" />
     );
@@ -38,11 +38,11 @@ describe('DesktopHeader Component', () => {
     expect(getByText('Driver')).toBeTruthy();
     expect(getByText('X')).toBeTruthy();
 
-    // Notifications and Profile buttons
+    // Notifications button
     expect(getByLabelText('Notifications')).toBeTruthy();
-    expect(getByLabelText('User profile')).toBeTruthy();
 
-    // Hamburger menu button is removed
+    // Profile button and hamburger menu are removed
+    expect(queryByLabelText('User profile')).toBeNull();
     expect(queryByLabelText('Open navigation menu')).toBeNull();
   });
 });

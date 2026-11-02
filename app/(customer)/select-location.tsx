@@ -10,7 +10,6 @@ import {
   useWindowDimensions,
   Platform,
   Pressable,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -86,6 +85,7 @@ export default function SelectLocationScreen() {
     (Platform.OS === 'web' && typeof window !== 'undefined' && window.innerWidth > 600);
   const [isLocating, setIsLocating] = useState(false);
   const [isResolvingAddress, setIsResolvingAddress] = useState(false);
+  const [inlineError, setInlineError] = useState<string | null>(null);
   const [activeField, setActiveField] = useState<'pickup' | 'drop'>('pickup');
 
   // Race condition protection & duplicate avoidance
@@ -342,6 +342,7 @@ export default function SelectLocationScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     setShowSuggestions(false);
     setIsLocating(true);
+    setInlineError(null);
 
     try {
       const result = await getCurrentLocation();
@@ -372,10 +373,12 @@ export default function SelectLocationScreen() {
           }
         }
       } else {
-        Alert.alert('Location Unavailable', result.message);
+        setInlineError(result.message);
       }
-    } catch {
-      Alert.alert('Location Error', 'Unable to retrieve your current location. Please try again.');
+    } catch (error) {
+      setInlineError(
+        error instanceof Error ? error.message : 'Unable to retrieve your current location.'
+      );
     } finally {
       setIsLocating(false);
     }
@@ -449,17 +452,14 @@ export default function SelectLocationScreen() {
 
   const handleContinue = () => {
     if (isResolvingAddress) {
-      Alert.alert('Please Wait', 'Resolving the selected location address...');
+      setInlineError('Resolving the selected location address. Please wait.');
       return;
     }
     if (!pickupLocation || !pickupLocation.trim()) {
-      if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        window.alert('Please enter or select a pickup location to continue.');
-      } else {
-        Alert.alert('Pickup Location Required', 'Please enter or select a pickup location to continue.');
-      }
+      setInlineError('Please enter or select a pickup location to continue.');
       return;
     }
+    setInlineError(null);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     router.push('/(customer)/select-datetime');
   };
@@ -538,6 +538,9 @@ export default function SelectLocationScreen() {
               <Text style={styles.desktopCardSubtitle}>
                 Choose your pickup and drop locations to find available drivers.
               </Text>
+              {inlineError ? (
+                <Text style={{ color: '#DC2626', marginTop: 8 }}>{inlineError}</Text>
+              ) : null}
 
               {/* Pickup Location Box */}
               <View
@@ -811,6 +814,9 @@ export default function SelectLocationScreen() {
               <Text style={styles.sheetSubtitle}>
                 Choose your pickup and drop locations to find available drivers.
               </Text>
+              {inlineError ? (
+                <Text style={{ color: '#DC2626', marginTop: 8 }}>{inlineError}</Text>
+              ) : null}
 
               {/* 1. Pickup Location Input Box */}
               <View

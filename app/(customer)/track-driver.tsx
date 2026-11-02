@@ -8,7 +8,6 @@ import {
   Image,
   useWindowDimensions,
   Platform,
-  Alert,
   Modal,
   Pressable,
   TextInput,
@@ -102,6 +101,7 @@ export default function TrackDriverScreen() {
     },
   ]);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
 
   useEffect(() => {
     // If active booking exists from backend, sync with it
@@ -127,12 +127,12 @@ export default function TrackDriverScreen() {
 
   const handleCallDriver = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    Linking.openURL(`tel:${driverPhone}`).catch(() => {
-      if (Platform.OS === 'web') {
-        window.alert(`Call driver: ${driverPhone}`);
-      } else {
-        Alert.alert('Call Driver', `Driver contact number: ${driverPhone}`);
-      }
+    Linking.openURL(`tel:${driverPhone}`).catch((error: unknown) => {
+      setActionMessage(
+        error instanceof Error
+          ? `Unable to open the phone app. Call the driver at ${driverPhone}.`
+          : `Call the driver at ${driverPhone}.`
+      );
     });
   };
 
@@ -149,7 +149,6 @@ export default function TrackDriverScreen() {
           });
         } else {
           await navigator.clipboard.writeText(shareMessage);
-          window.alert('Live trip tracking link copied to clipboard!');
         }
       } else {
         await Share.share({
@@ -157,8 +156,10 @@ export default function TrackDriverScreen() {
           title: 'DriverX Live Trip Tracking',
         });
       }
-    } catch {
-      // Handled
+    } catch (error) {
+      setActionMessage(
+        error instanceof Error ? error.message : 'Unable to share the trip details.'
+      );
     }
   };
 
@@ -197,33 +198,18 @@ export default function TrackDriverScreen() {
         if (activeBooking?.id) {
           await homeApi.cancelActiveBooking(activeBooking.id, 'Cancelled by customer');
         }
-        if (Platform.OS === 'web') {
-          window.alert('Booking has been cancelled.');
-        } else {
-          Alert.alert('Booking Cancelled', 'Your booking has been cancelled.');
-        }
+        setActionMessage(null);
         router.replace('/(customer)');
-      } catch {
-        router.replace('/(customer)');
+      } catch (error) {
+        setActionMessage(
+          error instanceof Error ? error.message : 'Unable to cancel this booking.'
+        );
       } finally {
         setIsCancelling(false);
       }
     };
 
-    if (Platform.OS === 'web') {
-      if (window.confirm('Are you sure you want to cancel this booking?')) {
-        executeCancel();
-      }
-    } else {
-      Alert.alert(
-        'Cancel Booking',
-        'Are you sure you want to cancel this booking? Your driver is already on the way.',
-        [
-          { text: 'Keep Booking', style: 'cancel' },
-          { text: 'Cancel Booking', style: 'destructive', onPress: executeCancel },
-        ]
-      );
-    }
+    void executeCancel();
   };
 
   // Content for mobile and desktop card
@@ -236,6 +222,9 @@ export default function TrackDriverScreen() {
           Your driver will reach the pickup location soon.
         </Text>
       </View>
+      {actionMessage ? (
+        <Text style={{ color: '#DC2626', marginBottom: 12 }}>{actionMessage}</Text>
+      ) : null}
 
       {/* 2. Map Section with Overlays & Custom Route */}
       <View style={styles.mapContainer}>

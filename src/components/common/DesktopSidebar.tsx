@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Image,
   Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -133,6 +132,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
             Trip History
           </Text>
         </TouchableOpacity>
+
       </View>
 
       {/* Secondary Items (Settings & Help) */}
@@ -208,22 +208,24 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
 const styles = StyleSheet.create({
   sidebarContainer: {
     width: 240,
-    paddingHorizontal: 16,
-    paddingVertical: 20,
-    flexDirection: 'column',
-    backgroundColor: '#F7FAFC',
+    backgroundColor: '#FFFFFF',
     borderRightWidth: 1,
-    borderRightColor: '#EDF2F7',
+    borderRightColor: '#EEF2F6',
+    paddingHorizontal: 16,
+    paddingTop: 24,
+    paddingBottom: 28,
+    flexDirection: 'column',
+    justifyContent: 'space-between',
   },
   primaryNavList: {
     gap: 8,
-    marginBottom: 28,
   },
   secondaryNavList: {
-    gap: 8,
+    marginTop: 24,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: '#F1F5F9',
+    gap: 8,
   },
   navItem: {
     flexDirection: 'row',
@@ -231,17 +233,12 @@ const styles = StyleSheet.create({
     gap: 14,
     paddingVertical: 12,
     paddingHorizontal: 16,
-    borderRadius: 14,
+    borderRadius: 12,
     backgroundColor: 'transparent',
-    ...(Platform.OS === 'web'
-      ? ({
-          cursor: 'pointer',
-          transition: 'all 0.15s ease-in-out',
-        } as any)
-      : {}),
+    ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : {}),
   },
   navItemActive: {
-    backgroundColor: '#E6FAF7',
+    backgroundColor: '#E6FAF6',
   },
   navItemText: {
     fontFamily: FONT.medium,
@@ -249,46 +246,41 @@ const styles = StyleSheet.create({
     color: '#64748B',
   },
   navItemTextActive: {
-    fontFamily: FONT.bold,
-    color: '#00D2B4',
+    fontFamily: FONT.semiBold,
+    color: '#00A892',
   },
   spacer: {
     flex: 1,
-    minHeight: 40,
   },
   promoCard: {
-    backgroundColor: '#EDFAF7',
+    backgroundColor: '#F0FDF9',
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#CFF3EC',
-    borderRadius: 16,
+    borderColor: '#CCFBEF',
     padding: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    shadowColor: '#00D2B4',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 2,
+    marginTop: 20,
   },
   promoTextWrap: {
     flex: 1,
   },
   promoMicroLabel: {
-    fontFamily: FONT.medium,
+    fontFamily: FONT.regular,
     fontSize: 11,
     color: '#64748B',
+    marginBottom: 2,
   },
   promoMainTitle: {
     fontFamily: FONT.bold,
-    fontSize: 13.5,
+    fontSize: 14,
     color: '#0E1E38',
-    marginTop: 1,
     marginBottom: 2,
   },
   promoSubtext: {
     fontFamily: FONT.regular,
-    fontSize: 9.5,
+    fontSize: 10,
     color: '#94A3B8',
   },
   promoCarWrap: {
@@ -301,9 +293,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#071226',
+    borderWidth: 1,
+    borderColor: '#99F6E0',
+    shadowColor: '#00D2B4',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
   },

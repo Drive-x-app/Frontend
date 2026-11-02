@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   Check,
   Copy,
@@ -57,6 +57,7 @@ const DotGrid = () => {
 
 export default function BookingConfirmedScreen() {
   const router = useRouter();
+  const { bookingId: rawBookingId } = useLocalSearchParams<{ bookingId?: string }>();
   const { width: windowWidth } = useWindowDimensions();
   const isDesktopOrTablet =
     windowWidth > 600 ||
@@ -77,7 +78,9 @@ export default function BookingConfirmedScreen() {
   const durationHours = selectedDuration?.hours || 1;
   const estimatedFare = durationHours * hourlyRate;
 
-  const bookingId = 'DXB126789';
+  const bookingId = rawBookingId
+    ? `DXB-${rawBookingId.replace(/-/g, '').slice(0, 8).toUpperCase()}`
+    : 'DXB126789';
   const [copied, setCopied] = useState(false);
 
   // Format Date string: "2026-10-29" -> "Thu, 29 Oct 2026"

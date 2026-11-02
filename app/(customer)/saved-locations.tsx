@@ -9,7 +9,6 @@ import {
   Image,
   useWindowDimensions,
   Platform,
-  Alert,
   Modal,
   Pressable,
   ActivityIndicator,
@@ -139,6 +138,8 @@ export default function SavedLocationsScreen() {
   const [modalType, setModalType] = useState<SavedLocationType>('home');
   const [modalTitle, setModalTitle] = useState('');
   const [modalAddress, setModalAddress] = useState('');
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
     loadSavedPlaces();
@@ -206,51 +207,27 @@ export default function SavedLocationsScreen() {
 
   const handleDeleteLocation = (item: SavedLocationItem) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-
-    const executeDelete = async () => {
-      setLocations((prev) => prev.filter((loc) => loc.id !== item.id));
-      try {
-        await homeApi.deleteSavedPlace(item.id);
-      } catch {
-        // Handled locally
-      }
-    };
-
-    if (Platform.OS === 'web') {
-      if (window.confirm(`Delete "${item.title}" from saved locations?`)) {
-        executeDelete();
-      }
-    } else {
-      Alert.alert(
-        'Delete Location',
-        `Are you sure you want to delete "${item.title}" from your saved locations?`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Delete', style: 'destructive', onPress: executeDelete },
-        ]
+    setLocations((prev) => prev.filter((loc) => loc.id !== item.id));
+    homeApi.deleteSavedPlace(item.id).catch((error: unknown) => {
+      setActionError(
+        error instanceof Error ? error.message : `Unable to delete "${item.title}".`
       );
-    }
+    });
   };
 
   const handleSaveModal = async () => {
     if (!modalTitle.trim()) {
-      if (Platform.OS === 'web') {
-        window.alert('Please enter a location name.');
-      } else {
-        Alert.alert('Required', 'Please enter a location name.');
-      }
+      setValidationError('Please enter a location name.');
       return;
     }
 
     if (!modalAddress.trim()) {
-      if (Platform.OS === 'web') {
-        window.alert('Please enter an address.');
-      } else {
-        Alert.alert('Required', 'Please enter an address.');
-      }
+      setValidationError('Please enter an address.');
       return;
     }
 
+    setValidationError(null);
+    setActionError(null);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     const cfg = TYPE_CONFIG[modalType];
 
@@ -486,6 +463,9 @@ export default function SavedLocationsScreen() {
               multiline
             />
           </View>
+          {validationError ? (
+            <Text style={{ color: '#DC2626', marginTop: 6 }}>{validationError}</Text>
+          ) : null}
 
           {/* Modal Actions */}
           <View style={styles.modalActionsRow}>
@@ -548,6 +528,9 @@ export default function SavedLocationsScreen() {
                     Save your frequent locations for quicker bookings.
                   </Text>
                 </View>
+                {actionError ? (
+                  <Text style={{ color: '#DC2626', marginBottom: 12 }}>{actionError}</Text>
+                ) : null}
 
                 {/* Location Cards */}
                 {renderLocationCards()}
@@ -609,6 +592,9 @@ export default function SavedLocationsScreen() {
             Save your frequent locations for quicker bookings.
           </Text>
         </View>
+        {actionError ? (
+          <Text style={{ color: '#DC2626', marginBottom: 12 }}>{actionError}</Text>
+        ) : null}
 
         {/* Saved Location Cards List */}
         {renderLocationCards()}
