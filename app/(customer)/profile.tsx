@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   Image,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -13,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import {
+  ArrowLeft,
   Camera,
   Bell,
   CarFront,
@@ -29,6 +29,7 @@ import {
 } from 'lucide-react-native';
 import { DesktopHeader } from '../../src/components/common/DesktopHeader';
 import { DesktopSidebar } from '../../src/components/common/DesktopSidebar';
+import { isCustomerDesktop } from '../../src/theme/layout';
 import { useAuthStore } from '../../src/store/authStore';
 import { useBookingStore } from '../../src/store/bookingStore';
 
@@ -71,7 +72,7 @@ function ProfileRow({
 export default function ProfileScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const isDesktop = width >= 960;
+  const isDesktop = isCustomerDesktop(width);
   const horizontalPadding =
     width < 360 ? 12 : width < 600 ? 16 : width < 960 ? 28 : width < 1280 ? 32 : 40;
   const user = useAuthStore((state) => state.user);
@@ -92,6 +93,11 @@ export default function ProfileScreen() {
     resetAuth();
     setActiveTab('home');
     router.replace('/(auth)/login');
+  };
+
+  const handleBackToHome = () => {
+    setActiveTab('home');
+    router.replace('/(customer)');
   };
 
   const content = (
@@ -202,6 +208,7 @@ export default function ProfileScreen() {
           title="Terms & Policies"
           description="Terms of service, privacy policy"
           icon={FileText}
+          onPress={() => router.push('/(customer)/terms-policies')}
         />
         <ProfileRow
           title="Log Out"
@@ -230,6 +237,16 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right', 'bottom']}>
       <StatusBar style="dark" />
+      <TouchableOpacity
+        style={styles.mobileBackButton}
+        onPress={handleBackToHome}
+        activeOpacity={0.75}
+        accessibilityRole="button"
+        accessibilityLabel="Back to Home"
+      >
+        <ArrowLeft size={21} color="#173A72" strokeWidth={2.2} />
+        <Text style={styles.mobileBackText}>Back</Text>
+      </TouchableOpacity>
       {content}
     </SafeAreaView>
   );
@@ -239,6 +256,20 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+  },
+  mobileBackButton: {
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  mobileBackText: {
+    color: '#173A72',
+    fontSize: 14,
+    fontFamily: 'Poppins-Medium',
   },
   content: {
     paddingTop: 16,
@@ -258,8 +289,6 @@ const styles = StyleSheet.create({
   },
   desktopMain: {
     flex: 1,
-    minWidth: 0,
-    backgroundColor: '#FFFFFF',
   },
   desktopContent: {
     width: '100%',

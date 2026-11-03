@@ -34,6 +34,7 @@ import {
 } from '../../src/store/bookingStore';
 import { DesktopHeader } from '../../src/components/common/DesktopHeader';
 import { DesktopSidebar } from '../../src/components/common/DesktopSidebar';
+import { isCustomerDesktop } from '../../src/theme/layout';
 import { FONT } from '../../src/theme/typography';
 
 /**
@@ -59,9 +60,7 @@ export default function BookingConfirmedScreen() {
   const router = useRouter();
   const { bookingId: rawBookingId } = useLocalSearchParams<{ bookingId?: string }>();
   const { width: windowWidth } = useWindowDimensions();
-  const isDesktopOrTablet =
-    windowWidth > 600 ||
-    (Platform.OS === 'web' && typeof window !== 'undefined' && window.innerWidth > 600);
+  const isDesktopOrTablet = isCustomerDesktop(windowWidth);
 
   // Zustand State
   const pickupLocation = useBookingStore((state) => state.pickupLocation);

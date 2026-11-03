@@ -8,12 +8,42 @@ export interface DurationOption {
 }
 
 export const DURATION_OPTIONS: DurationOption[] = [
-  { id: '1h', label: '1 Hour', description: 'Short trips\nand quick travel', hours: 1 },
-  { id: '2h', label: '2 Hours', description: 'Meetings,\nshopping, personal\nwork', hours: 2 },
-  { id: '4h', label: '4 Hours', description: 'Multiple stops\nin the city', hours: 4 },
-  { id: '6h', label: '6 Hours', description: 'Business or\npersonal travel', hours: 6 },
-  { id: 'fullday', label: 'Full Day', description: 'Complete day\nwith a driver', hours: 12 },
-  { id: '1week', label: '1 Week', description: 'Long-term\nrequirement', hours: 168 },
+  {
+    id: '1h',
+    label: '1 Hour',
+    description: 'Short trips\nand quick travel',
+    hours: 1,
+  },
+  {
+    id: '2h',
+    label: '2 Hours',
+    description: 'Meetings,\nshopping, personal\nwork',
+    hours: 2,
+  },
+  {
+    id: '4h',
+    label: '4 Hours',
+    description: 'Multiple stops\nin the city',
+    hours: 4,
+  },
+  {
+    id: '6h',
+    label: '6 Hours',
+    description: 'Business or\npersonal travel',
+    hours: 6,
+  },
+  {
+    id: 'fullday',
+    label: 'Full Day',
+    description: 'Complete day\nwith a driver',
+    hours: 12,
+  },
+  {
+    id: '1week',
+    label: '1 Week',
+    description: 'Long-term\nrequirement',
+    hours: 168,
+  },
 ];
 
 export interface SavedPlace {
@@ -29,33 +59,6 @@ export interface RecentPlace {
   address: string;
 }
 
-export const INITIAL_SAVED_PLACES: SavedPlace[] = [
-  {
-    id: 'place-home',
-    title: 'Home',
-    address: '123, Anna Nagar, Coimbatore',
-    type: 'home',
-  },
-  {
-    id: 'place-office',
-    title: 'Office',
-    address: 'RS Puram, Coimbatore',
-    type: 'office',
-  },
-  {
-    id: 'place-parents',
-    title: 'Parents Home',
-    address: 'Saibaba Colony, Coimbatore',
-    type: 'parents',
-  },
-  {
-    id: 'place-other',
-    title: 'Other',
-    address: 'Add New Location',
-    type: 'other',
-  },
-];
-
 export const INITIAL_RECENT_PLACES: RecentPlace[] = [
   {
     id: 'recent-1',
@@ -69,14 +72,8 @@ export const INITIAL_RECENT_PLACES: RecentPlace[] = [
   },
 ];
 
-import {
-  homeApi,
-  BackendHomeScreenData,
-  BackendRecentBooking,
-  BackendActiveBooking,
-  BackendDuration,
-  BackendPromoBanner,
-} from '../services/api/homeApi';
+import { homeApi, BackendHomeScreenData, BackendRecentBooking, BackendActiveBooking, BackendDuration, BackendPromoBanner } from '../services/api/homeApi';
+import { useAuthStore } from './authStore';
 import { GeoCoordinates } from '../types';
 import { RouteGeometryPoint } from '../services/location/routingService';
 import { getTodayDateKey } from '../utils/dateTime';
@@ -113,12 +110,10 @@ export interface BookingState {
   setPickupCoords: (coords: GeoCoordinates | null) => void;
   setDropLocation: (location: string) => void;
   setDropCoords: (coords: GeoCoordinates | null) => void;
-  setRouteMetrics: (metrics: {
-    distanceKm: number | null;
-    durationMinutes: number | null;
-    coordinates?: RouteGeometryPoint[] | null;
-  }) => void;
+  setRouteMetrics: (metrics: { distanceKm: number | null; durationMinutes: number | null; coordinates?: RouteGeometryPoint[] | null }) => void;
   setActiveTab: (tab: 'home' | 'bookings' | 'history' | 'profile') => void;
+  setActiveBooking: (booking: BackendActiveBooking | null) => void;
+  setSavedPlaces: (places: SavedPlace[] | ((currentPlaces: SavedPlace[]) => SavedPlace[])) => void;
   setSelectedDate: (date: string) => void;
   setSelectedTime: (time: string) => void;
   setPickupTimingMode: (mode: 'now' | 'later') => void;
@@ -146,7 +141,7 @@ export const useBookingStore = create<BookingState>((set) => ({
   estimatedDurationMinutes: null,
   routeCoordinates: null,
   activeTab: 'home',
-  savedPlaces: INITIAL_SAVED_PLACES,
+  savedPlaces: [],
   recentPlaces: INITIAL_RECENT_PLACES,
   recentBookings: [],
   activeBooking: null,
@@ -166,26 +161,46 @@ export const useBookingStore = create<BookingState>((set) => ({
       pickupLocation: location,
       pickupCoords: state.pickupCoords?.address === location ? state.pickupCoords : null,
       ...(state.pickupCoords?.address !== location
-        ? { estimatedDistanceKm: null, estimatedDurationMinutes: null, routeCoordinates: null }
+        ? {
+            estimatedDistanceKm: null,
+            estimatedDurationMinutes: null,
+            routeCoordinates: null,
+          }
         : {}),
     })),
   setPickupCoords: (coords: GeoCoordinates | null) =>
     set({
       pickupCoords: coords,
-      ...(!coords ? { estimatedDistanceKm: null, estimatedDurationMinutes: null, routeCoordinates: null } : {}),
+      ...(!coords
+        ? {
+            estimatedDistanceKm: null,
+            estimatedDurationMinutes: null,
+            routeCoordinates: null,
+          }
+        : {}),
     }),
   setDropLocation: (location: string) =>
     set((state) => ({
       dropLocation: location,
       dropCoords: state.dropCoords?.address === location ? state.dropCoords : null,
       ...(state.dropCoords?.address !== location
-        ? { estimatedDistanceKm: null, estimatedDurationMinutes: null, routeCoordinates: null }
+        ? {
+            estimatedDistanceKm: null,
+            estimatedDurationMinutes: null,
+            routeCoordinates: null,
+          }
         : {}),
     })),
   setDropCoords: (coords: GeoCoordinates | null) =>
     set({
       dropCoords: coords,
-      ...(!coords ? { estimatedDistanceKm: null, estimatedDurationMinutes: null, routeCoordinates: null } : {}),
+      ...(!coords
+        ? {
+            estimatedDistanceKm: null,
+            estimatedDurationMinutes: null,
+            routeCoordinates: null,
+          }
+        : {}),
     }),
   setRouteMetrics: (metrics) =>
     set({
@@ -194,6 +209,11 @@ export const useBookingStore = create<BookingState>((set) => ({
       routeCoordinates: metrics.coordinates || null,
     }),
   setActiveTab: (activeTab: 'home' | 'bookings' | 'history' | 'profile') => set({ activeTab }),
+  setActiveBooking: (activeBooking) => set({ activeBooking }),
+  setSavedPlaces: (places) =>
+    set((state) => ({
+      savedPlaces: typeof places === 'function' ? places(state.savedPlaces) : places,
+    })),
   setSelectedDate: (selectedDate: string) => set({ selectedDate }),
   setSelectedTime: (selectedTime: string) => set({ selectedTime }),
   setPickupTimingMode: (pickupTimingMode: 'now' | 'later') => set({ pickupTimingMode }),
@@ -202,21 +222,23 @@ export const useBookingStore = create<BookingState>((set) => ({
       set({ pickupLocation: place.address, pickupCoords: null });
     }
   },
-  applyRecentPlace: (place: RecentPlace) =>
-    set({ dropLocation: `${place.title}, ${place.address}`, dropCoords: null }),
+  applyRecentPlace: (place: RecentPlace) => set({ dropLocation: `${place.title}, ${place.address}`, dropCoords: null }),
   clearRecentPlaces: () => set({ recentPlaces: [] }),
   loadHomeScreenData: async () => {
     try {
       set({ isLoadingHome: true });
-      const data: BackendHomeScreenData = await homeApi.getHomeScreenData();
+      const phoneNumber = useAuthStore.getState().user?.phoneNumber;
+      if (!phoneNumber) {
+        set({ savedPlaces: [], isLoadingHome: false });
+        return;
+      }
+
+      const data: BackendHomeScreenData = await homeApi.getHomeScreenData(phoneNumber);
       if (data) {
         set({
           userName: data.user?.fullName || 'Hariharan',
           unreadNotifications: data.user?.unreadNotificationCount || 0,
-          savedPlaces:
-            data.savedPlaces && data.savedPlaces.length > 0
-              ? (data.savedPlaces as SavedPlace[])
-              : INITIAL_SAVED_PLACES,
+          savedPlaces: data.savedPlaces || [],
           recentBookings: data.recentBookings || [],
           activeBooking: data.activeBooking || null,
           durations: data.durations || [],
@@ -225,8 +247,7 @@ export const useBookingStore = create<BookingState>((set) => ({
         });
       }
     } catch {
-      // Fallback gracefully to offline initial state
-      set({ isLoadingHome: false });
+      set({ savedPlaces: [], isLoadingHome: false });
     }
   },
   markNotificationsAsRead: async () => {
@@ -253,4 +274,3 @@ export const useBookingStore = create<BookingState>((set) => ({
       isBooking: false,
     }),
 }));
-

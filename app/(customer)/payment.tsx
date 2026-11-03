@@ -39,6 +39,7 @@ import {
 import { bookingsApi } from '../../src/services/api/bookingsApi';
 import { DesktopHeader } from '../../src/components/common/DesktopHeader';
 import { DesktopSidebar } from '../../src/components/common/DesktopSidebar';
+import { isCustomerDesktop } from '../../src/theme/layout';
 import { FONT } from '../../src/theme/typography';
 
 /**
@@ -63,9 +64,7 @@ const DotGrid = () => {
 export default function ChoosePaymentScreen() {
   const router = useRouter();
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
-  const isDesktopOrTablet =
-    windowWidth > 600 ||
-    (Platform.OS === 'web' && typeof window !== 'undefined' && window.innerWidth > 600);
+  const isDesktopOrTablet = isCustomerDesktop(windowWidth);
 
   // Zustand State
   const pickupLocation = useBookingStore((state) => state.pickupLocation);
@@ -74,6 +73,7 @@ export default function ChoosePaymentScreen() {
   const selectedDate = useBookingStore((state) => state.selectedDate);
   const selectedTime = useBookingStore((state) => state.selectedTime);
   const pickupTimingMode = useBookingStore((state) => state.pickupTimingMode);
+  const setActiveBooking = useBookingStore((state) => state.setActiveBooking);
 
   const selectedDuration =
     DURATION_OPTIONS.find((d) => d.id === selectedDurationId) ||
@@ -153,8 +153,23 @@ export default function ChoosePaymentScreen() {
           : {}),
         paymentMethod: selectedMethod === 'upi' ? 'UPI' : 'CARD',
       });
-      router.push({
-        pathname: '/(customer)/booking-confirmed',
+      const duration = DURATION_OPTIONS.find((option) => option.id === booking.durationId);
+      setActiveBooking({
+        id: booking.id,
+        status: booking.status,
+        durationId: booking.durationId,
+        durationLabel: booking.durationLabel,
+        hours: duration?.hours ?? selectedDuration.hours,
+        pickupAddress: booking.pickupLocation,
+        dropAddress: booking.dropLocation,
+        pickupDate: booking.pickupDate || selectedDate,
+        pickupTime: booking.pickupTime || selectedTime,
+        fare: booking.fare,
+        driver: null,
+        createdAt: booking.createdAt,
+      });
+      router.replace({
+        pathname: '/(customer)/track-driver',
         params: { bookingId: booking.id },
       });
     } catch (error: unknown) {

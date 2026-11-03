@@ -43,6 +43,7 @@ import * as Haptics from 'expo-haptics';
 import { useBookingStore } from '../../src/store/bookingStore';
 import { DesktopHeader } from '../../src/components/common/DesktopHeader';
 import { DesktopSidebar } from '../../src/components/common/DesktopSidebar';
+import { isCustomerDesktop } from '../../src/theme/layout';
 import { InteractiveMap } from '../../src/components/common/InteractiveMap';
 import { FONT } from '../../src/theme/typography';
 import { homeApi } from '../../src/services/api/homeApi';
@@ -75,9 +76,7 @@ export default function TripInProgressScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
-  const isDesktopOrTablet =
-    windowWidth > 600 ||
-    (Platform.OS === 'web' && typeof window !== 'undefined' && window.innerWidth > 600);
+  const isDesktopOrTablet = isCustomerDesktop(windowWidth);
 
   // Zustand Store
   const pickupLocationStore = useBookingStore((state) => state.pickupLocation);

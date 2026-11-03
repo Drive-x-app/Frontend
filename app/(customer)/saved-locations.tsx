@@ -16,35 +16,17 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
-import {
-  ArrowLeft,
-  Home,
-  Briefcase,
-  Star,
-  MapPin,
-  Cross,
-  GraduationCap,
-  Pencil,
-  Trash2,
-  Plus,
-  X,
-  Check,
-} from 'lucide-react-native';
+import { ArrowLeft, Home, Briefcase, Star, MapPin, Cross, GraduationCap, Pencil, Trash2, Plus, X, Check } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { homeApi } from '../../src/services/api/homeApi';
+import { useAuthStore } from '../../src/store/authStore';
 import { useBookingStore } from '../../src/store/bookingStore';
 import { DesktopHeader } from '../../src/components/common/DesktopHeader';
 import { DesktopSidebar } from '../../src/components/common/DesktopSidebar';
+import { isCustomerDesktop } from '../../src/theme/layout';
 import { FONT } from '../../src/theme/typography';
 
-export type SavedLocationType =
-  | 'home'
-  | 'work'
-  | 'parents'
-  | 'friends'
-  | 'hospital'
-  | 'college'
-  | 'other';
+export type SavedLocationType = 'home' | 'work' | 'parents' | 'friends' | 'hospital' | 'college' | 'other';
 
 export interface SavedLocationItem {
   id: string;
@@ -55,65 +37,15 @@ export interface SavedLocationItem {
   iconColor: string;
 }
 
-const DEFAULT_SAVED_LOCATIONS: SavedLocationItem[] = [
-  {
-    id: 'loc-1',
-    title: 'Home',
-    address: '123, Anna Nagar, Coimbatore,\nTamil Nadu - 641040',
-    type: 'home',
-    bgColor: '#EFF6FF',
-    iconColor: '#2563EB',
-  },
-  {
-    id: 'loc-2',
-    title: 'Work',
-    address: 'KCT Tech Park, Saravanampatti,\nCoimbatore - 641035',
-    type: 'work',
-    bgColor: '#E6FAF7',
-    iconColor: '#00D2B4',
-  },
-  {
-    id: 'loc-3',
-    title: 'Parents House',
-    address: 'Saibaba Colony, Coimbatore,\nTamil Nadu - 641011',
-    type: 'parents',
-    bgColor: '#FEF9C3',
-    iconColor: '#EAB308',
-  },
-  {
-    id: 'loc-4',
-    title: "Friend's Place",
-    address: 'RS Puram, Coimbatore,\nTamil Nadu - 641002',
-    type: 'friends',
-    bgColor: '#F3E8FF',
-    iconColor: '#9333EA',
-  },
-  {
-    id: 'loc-5',
-    title: 'Hospital',
-    address: 'Ganga Hospital, Peelamedu,\nCoimbatore - 641004',
-    type: 'hospital',
-    bgColor: '#FEE2E2',
-    iconColor: '#EF4444',
-  },
-  {
-    id: 'loc-6',
-    title: 'College',
-    address: 'Kongu Engineering College,\nPerundurai, Erode - 638060',
-    type: 'college',
-    bgColor: '#EFF6FF',
-    iconColor: '#2563EB',
-  },
-];
-
-const TYPE_CONFIG: Record<
-  SavedLocationType,
-  { label: string; bgColor: string; iconColor: string }
-> = {
+const TYPE_CONFIG: Record<SavedLocationType, { label: string; bgColor: string; iconColor: string }> = {
   home: { label: 'Home', bgColor: '#EFF6FF', iconColor: '#2563EB' },
   work: { label: 'Work', bgColor: '#E6FAF7', iconColor: '#00D2B4' },
   parents: { label: 'Parents House', bgColor: '#FEF9C3', iconColor: '#EAB308' },
-  friends: { label: "Friend's Place", bgColor: '#F3E8FF', iconColor: '#9333EA' },
+  friends: {
+    label: "Friend's Place",
+    bgColor: '#F3E8FF',
+    iconColor: '#9333EA',
+  },
   hospital: { label: 'Hospital', bgColor: '#FEE2E2', iconColor: '#EF4444' },
   college: { label: 'College', bgColor: '#EFF6FF', iconColor: '#2563EB' },
   other: { label: 'Other', bgColor: '#F1F5F9', iconColor: '#64748B' },
@@ -123,14 +55,15 @@ export default function SavedLocationsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
-  const isDesktopOrTablet =
-    windowWidth > 600 ||
-    (Platform.OS === 'web' && typeof window !== 'undefined' && window.innerWidth > 600);
+  const isDesktopOrTablet = isCustomerDesktop(windowWidth);
 
   const applySavedPlace = useBookingStore((state) => state.applySavedPlace);
+  const setBookingSavedPlaces = useBookingStore((state) => state.setSavedPlaces);
+  const accountPhoneNumber = useAuthStore((state) => state.user?.phoneNumber);
 
-  const [locations, setLocations] = useState<SavedLocationItem[]>(DEFAULT_SAVED_LOCATIONS);
+  const [locations, setLocations] = useState<SavedLocationItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Modal State for Add / Edit
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -142,39 +75,60 @@ export default function SavedLocationsScreen() {
   const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadSavedPlaces();
-  }, []);
+    void loadSavedPlaces();
+  }, [accountPhoneNumber]);
 
   const loadSavedPlaces = async () => {
-    try {
-      const places = await homeApi.getSavedPlaces();
-      if (places && places.length > 0) {
-        const mapped: SavedLocationItem[] = places.map((p, index) => {
-          let detectedType: SavedLocationType = 'other';
-          const titleLower = p.title.toLowerCase();
-          if (p.type === 'home' || titleLower.includes('home')) detectedType = 'home';
-          else if (p.type === 'office' || titleLower.includes('work') || titleLower.includes('office'))
-            detectedType = 'work';
-          else if (p.type === 'parents' || titleLower.includes('parent')) detectedType = 'parents';
-          else if (titleLower.includes('friend')) detectedType = 'friends';
-          else if (titleLower.includes('hospital')) detectedType = 'hospital';
-          else if (titleLower.includes('college') || titleLower.includes('school'))
-            detectedType = 'college';
+    if (!accountPhoneNumber) {
+      setLocations([]);
+      setBookingSavedPlaces([]);
+      setIsLoading(false);
+      setActionError('Please sign in to view your saved locations.');
+      return;
+    }
 
-          const cfg = TYPE_CONFIG[detectedType];
+    setIsLoading(true);
+    setLocations([]);
+    setBookingSavedPlaces([]);
+    setActionError(null);
+    try {
+      const places = await homeApi.getSavedPlaces(accountPhoneNumber);
+      setBookingSavedPlaces(
+        places.map(({ id, title, address, type }) => ({
+          id,
+          title,
+          address,
+          type,
+        })),
+      );
+      setLocations(
+        places.map((place) => {
+          let type: SavedLocationType = 'other';
+          const title = place.title.toLowerCase();
+          if (place.type === 'home' || title.includes('home')) type = 'home';
+          else if (place.type === 'office' || title.includes('work') || title.includes('office')) type = 'work';
+          else if (place.type === 'parents' || title.includes('parent')) type = 'parents';
+          else if (title.includes('friend')) type = 'friends';
+          else if (title.includes('hospital')) type = 'hospital';
+          else if (title.includes('college') || title.includes('school')) type = 'college';
+
+          const config = TYPE_CONFIG[type];
           return {
-            id: p.id || `place-${index}`,
-            title: p.title,
-            address: p.address,
-            type: detectedType,
-            bgColor: cfg.bgColor,
-            iconColor: cfg.iconColor,
+            id: place.id,
+            title: place.title,
+            address: place.address,
+            type,
+            bgColor: config.bgColor,
+            iconColor: config.iconColor,
           };
-        });
-        setLocations(mapped);
-      }
-    } catch {
-      // Keep default mock locations if offline / fallback
+        }),
+      );
+    } catch (error) {
+      setLocations([]);
+      setBookingSavedPlaces([]);
+      setActionError(error instanceof Error ? `Unable to load saved locations: ${error.message}` : 'Unable to load saved locations.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -189,6 +143,8 @@ export default function SavedLocationsScreen() {
 
   const handleOpenAddModal = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    setActionError(null);
+    setValidationError(null);
     setEditingItem(null);
     setModalType('home');
     setModalTitle('');
@@ -198,6 +154,8 @@ export default function SavedLocationsScreen() {
 
   const handleOpenEditModal = (item: SavedLocationItem) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    setActionError(null);
+    setValidationError(null);
     setEditingItem(item);
     setModalType(item.type);
     setModalTitle(item.title);
@@ -205,14 +163,21 @@ export default function SavedLocationsScreen() {
     setIsModalOpen(true);
   };
 
-  const handleDeleteLocation = (item: SavedLocationItem) => {
+  const handleDeleteLocation = async (item: SavedLocationItem) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-    setLocations((prev) => prev.filter((loc) => loc.id !== item.id));
-    homeApi.deleteSavedPlace(item.id).catch((error: unknown) => {
-      setActionError(
-        error instanceof Error ? error.message : `Unable to delete "${item.title}".`
-      );
-    });
+    if (!accountPhoneNumber) {
+      setActionError('Please sign in to delete saved locations.');
+      return;
+    }
+
+    try {
+      await homeApi.deleteSavedPlace(item.id, accountPhoneNumber);
+      setLocations((previous) => previous.filter((location) => location.id !== item.id));
+      setBookingSavedPlaces((places) => places.filter((place) => place.id !== item.id));
+      setActionError(null);
+    } catch (error: unknown) {
+      setActionError(error instanceof Error ? error.message : `Unable to delete "${item.title}".`);
+    }
   };
 
   const handleSaveModal = async () => {
@@ -228,61 +193,84 @@ export default function SavedLocationsScreen() {
 
     setValidationError(null);
     setActionError(null);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    const cfg = TYPE_CONFIG[modalType];
-
-    if (editingItem) {
-      // Edit existing
-      setLocations((prev) =>
-        prev.map((loc) =>
-          loc.id === editingItem.id
-            ? {
-                ...loc,
-                title: modalTitle.trim(),
-                address: modalAddress.trim(),
-                type: modalType,
-                bgColor: cfg.bgColor,
-                iconColor: cfg.iconColor,
-              }
-            : loc
-        )
-      );
-
-      try {
-        await homeApi.updateSavedPlace(editingItem.id, {
-          title: modalTitle.trim(),
-          address: modalAddress.trim(),
-          type: modalType === 'home' ? 'home' : modalType === 'work' ? 'office' : modalType === 'parents' ? 'parents' : 'other',
-        });
-      } catch {
-        // Fallback local update
-      }
-    } else {
-      // Add new
-      const newId = `loc-${Date.now()}`;
-      const newLoc: SavedLocationItem = {
-        id: newId,
-        title: modalTitle.trim(),
-        address: modalAddress.trim(),
-        type: modalType,
-        bgColor: cfg.bgColor,
-        iconColor: cfg.iconColor,
-      };
-
-      setLocations((prev) => [...prev, newLoc]);
-
-      try {
-        await homeApi.addSavedPlace({
-          title: modalTitle.trim(),
-          address: modalAddress.trim(),
-          type: modalType === 'home' ? 'home' : modalType === 'work' ? 'office' : modalType === 'parents' ? 'parents' : 'other',
-        });
-      } catch {
-        // Fallback local addition
-      }
+    if (!accountPhoneNumber) {
+      setActionError('Please sign in to save locations.');
+      return;
     }
 
-    setIsModalOpen(false);
+    setIsSaving(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    const cfg = TYPE_CONFIG[modalType];
+    const savedPlaceType = modalType === 'home' ? 'home' : modalType === 'work' ? 'office' : modalType === 'parents' ? 'parents' : 'other';
+
+    try {
+      if (editingItem) {
+        const updated = await homeApi.updateSavedPlace(editingItem.id, accountPhoneNumber, {
+          title: modalTitle.trim(),
+          address: modalAddress.trim(),
+          type: savedPlaceType,
+        });
+        setBookingSavedPlaces((places) =>
+          places.map((place) =>
+            place.id === updated.id
+              ? {
+                  id: updated.id,
+                  title: updated.title,
+                  address: updated.address,
+                  type: updated.type,
+                }
+              : place,
+          ),
+        );
+        setLocations((previous) =>
+          previous.map((location) =>
+            location.id === editingItem.id
+              ? {
+                  ...location,
+                  title: modalTitle.trim(),
+                  address: modalAddress.trim(),
+                  type: modalType,
+                  bgColor: cfg.bgColor,
+                  iconColor: cfg.iconColor,
+                }
+              : location,
+          ),
+        );
+      } else {
+        const created = await homeApi.addSavedPlace({
+          phoneNumber: accountPhoneNumber,
+          title: modalTitle.trim(),
+          address: modalAddress.trim(),
+          type: savedPlaceType,
+        });
+        setBookingSavedPlaces((places) => [
+          ...places,
+          {
+            id: created.id,
+            title: created.title,
+            address: created.address,
+            type: created.type,
+          },
+        ]);
+        setLocations((previous) => [
+          ...previous,
+          {
+            id: created.id,
+            title: created.title,
+            address: created.address,
+            type: modalType,
+            bgColor: cfg.bgColor,
+            iconColor: cfg.iconColor,
+          },
+        ]);
+      }
+
+      setIsModalOpen(false);
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : 'Unable to save this location to your account.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const renderLocationIcon = (type: SavedLocationType, iconColor: string) => {
@@ -306,65 +294,63 @@ export default function SavedLocationsScreen() {
 
   const renderLocationCards = () => (
     <View style={styles.listContainer}>
-      {locations.map((item) => (
-        <View key={item.id} style={styles.card}>
-          {/* Left Icon with tinted background circle */}
-          <View style={[styles.iconCircle, { backgroundColor: item.bgColor }]}>
-            {renderLocationIcon(item.type, item.iconColor)}
-          </View>
-
-          {/* Location Title & Multi-line Address */}
-          <View style={styles.detailsCol}>
-            <Text style={styles.locationTitle}>{item.title}</Text>
-            <Text style={styles.locationAddress} numberOfLines={2}>
-              {item.address}
-            </Text>
-          </View>
-
-          {/* Action Buttons: Edit & Delete */}
-          <View style={styles.actionsRow}>
-            <TouchableOpacity
-              style={styles.actionBtn}
-              activeOpacity={0.7}
-              onPress={() => handleOpenEditModal(item)}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              accessibilityLabel={`Edit ${item.title}`}
-            >
-              <Pencil size={18} color="#0E1E38" strokeWidth={2} />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.actionBtn}
-              activeOpacity={0.7}
-              onPress={() => handleDeleteLocation(item)}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              accessibilityLabel={`Delete ${item.title}`}
-            >
-              <Trash2 size={18} color="#EF4444" strokeWidth={2} />
-            </TouchableOpacity>
-          </View>
+      {isLoading ? (
+        <View style={styles.emptyContainer}>
+          <ActivityIndicator color="#00D2B4" />
+          <Text style={styles.emptySubtitle}>Loading your saved locations...</Text>
         </View>
-      ))}
+      ) : null}
+      {!isLoading &&
+        locations.map((item) => (
+          <View key={item.id} style={styles.card}>
+            {/* Left Icon with tinted background circle */}
+            <View style={[styles.iconCircle, { backgroundColor: item.bgColor }]}>{renderLocationIcon(item.type, item.iconColor)}</View>
 
-      {locations.length === 0 && (
+            {/* Location Title & Multi-line Address */}
+            <View style={styles.detailsCol}>
+              <Text style={styles.locationTitle}>{item.title}</Text>
+              <Text style={styles.locationAddress} numberOfLines={2}>
+                {item.address}
+              </Text>
+            </View>
+
+            {/* Action Buttons: Edit & Delete */}
+            <View style={styles.actionsRow}>
+              <TouchableOpacity
+                style={styles.actionBtn}
+                activeOpacity={0.7}
+                onPress={() => handleOpenEditModal(item)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                accessibilityLabel={`Edit ${item.title}`}
+              >
+                <Pencil size={18} color="#0E1E38" strokeWidth={2} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.actionBtn}
+                activeOpacity={0.7}
+                onPress={() => handleDeleteLocation(item)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                accessibilityLabel={`Delete ${item.title}`}
+              >
+                <Trash2 size={18} color="#EF4444" strokeWidth={2} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        ))}
+
+      {!isLoading && locations.length === 0 && (
         <View style={styles.emptyContainer}>
           <MapPin size={40} color="#94A3B8" strokeWidth={1.8} />
           <Text style={styles.emptyTitle}>No saved locations yet</Text>
-          <Text style={styles.emptySubtitle}>
-            Add your favorite destinations to quickly book drivers.
-          </Text>
+          <Text style={styles.emptySubtitle}>Add your favorite destinations to quickly book drivers.</Text>
         </View>
       )}
     </View>
   );
 
   const renderAddButton = () => (
-    <TouchableOpacity
-      style={styles.addButton}
-      activeOpacity={0.85}
-      onPress={handleOpenAddModal}
-      accessibilityLabel="Add New Location"
-    >
+    <TouchableOpacity style={styles.addButton} activeOpacity={0.85} onPress={handleOpenAddModal} accessibilityLabel="Add New Location">
       <View style={styles.addIconCircle}>
         <Plus size={16} color="#FFFFFF" strokeWidth={3} />
       </View>
@@ -373,43 +359,26 @@ export default function SavedLocationsScreen() {
   );
 
   const renderModal = () => (
-    <Modal
-      visible={isModalOpen}
-      transparent={true}
-      animationType="fade"
-      onRequestClose={() => setIsModalOpen(false)}
-    >
+    <Modal visible={isModalOpen} transparent={true} animationType="fade" onRequestClose={() => setIsModalOpen(false)}>
       <Pressable style={styles.modalBackdrop} onPress={() => setIsModalOpen(false)}>
         <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
           <View style={styles.modalHeaderRow}>
-            <Text style={styles.modalHeaderTitle}>
-              {editingItem ? 'Edit Location' : 'Add New Location'}
-            </Text>
-            <TouchableOpacity
-              onPress={() => setIsModalOpen(false)}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
+            <Text style={styles.modalHeaderTitle}>{editingItem ? 'Edit Location' : 'Add New Location'}</Text>
+            <TouchableOpacity onPress={() => setIsModalOpen(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
               <X size={20} color="#64748B" strokeWidth={2.2} />
             </TouchableOpacity>
           </View>
 
           {/* Location Category Selection */}
           <Text style={styles.inputLabel}>Category</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.categoryScroll}
-          >
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
             {(Object.keys(TYPE_CONFIG) as SavedLocationType[]).map((typeKey) => {
               const isSelected = modalType === typeKey;
               const cfg = TYPE_CONFIG[typeKey];
               return (
                 <TouchableOpacity
                   key={typeKey}
-                  style={[
-                    styles.categoryChip,
-                    isSelected && styles.categoryChipSelected,
-                  ]}
+                  style={[styles.categoryChip, isSelected && styles.categoryChipSelected]}
                   activeOpacity={0.7}
                   onPress={() => {
                     setModalType(typeKey);
@@ -418,22 +387,8 @@ export default function SavedLocationsScreen() {
                     }
                   }}
                 >
-                  <View
-                    style={[
-                      styles.categoryChipIcon,
-                      { backgroundColor: cfg.bgColor },
-                    ]}
-                  >
-                    {renderLocationIcon(typeKey, cfg.iconColor)}
-                  </View>
-                  <Text
-                    style={[
-                      styles.categoryChipText,
-                      isSelected && styles.categoryChipTextSelected,
-                    ]}
-                  >
-                    {cfg.label}
-                  </Text>
+                  <View style={[styles.categoryChipIcon, { backgroundColor: cfg.bgColor }]}>{renderLocationIcon(typeKey, cfg.iconColor)}</View>
+                  <Text style={[styles.categoryChipText, isSelected && styles.categoryChipTextSelected]}>{cfg.label}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -455,7 +410,10 @@ export default function SavedLocationsScreen() {
           <Text style={styles.inputLabel}>Full Address</Text>
           <View style={[styles.inputContainer, { height: 76, alignItems: 'flex-start', paddingTop: 8 }]}>
             <TextInput
-              style={[styles.textInput, { height: 60, textAlignVertical: 'top' }]}
+              style={[
+                styles.textInput,
+                { height: 60, textAlignVertical: 'top', overflow: 'hidden' },
+              ]}
               value={modalAddress}
               onChangeText={setModalAddress}
               placeholder="Street name, landmark, area, city, pincode"
@@ -463,28 +421,17 @@ export default function SavedLocationsScreen() {
               multiline
             />
           </View>
-          {validationError ? (
-            <Text style={{ color: '#DC2626', marginTop: 6 }}>{validationError}</Text>
-          ) : null}
+          {validationError ? <Text style={{ color: '#DC2626', marginTop: 6 }}>{validationError}</Text> : null}
+          {actionError ? <Text style={{ color: '#DC2626', marginTop: 6 }}>{actionError}</Text> : null}
 
           {/* Modal Actions */}
           <View style={styles.modalActionsRow}>
-            <TouchableOpacity
-              style={styles.modalCancelBtn}
-              activeOpacity={0.8}
-              onPress={() => setIsModalOpen(false)}
-            >
+            <TouchableOpacity style={styles.modalCancelBtn} activeOpacity={0.8} onPress={() => setIsModalOpen(false)}>
               <Text style={styles.modalCancelText}>Cancel</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.modalSubmitBtn}
-              activeOpacity={0.85}
-              onPress={handleSaveModal}
-            >
-              <Text style={styles.modalSubmitText}>
-                {editingItem ? 'Save Changes' : 'Add Location'}
-              </Text>
+            <TouchableOpacity style={styles.modalSubmitBtn} activeOpacity={0.85} onPress={handleSaveModal} disabled={isSaving}>
+              <Text style={styles.modalSubmitText}>{isSaving ? 'Saving...' : editingItem ? 'Save Changes' : 'Add Location'}</Text>
             </TouchableOpacity>
           </View>
         </Pressable>
@@ -505,18 +452,10 @@ export default function SavedLocationsScreen() {
           <DesktopSidebar activeTab="settings" />
 
           <View style={styles.desktopContentArea}>
-            <ScrollView
-              style={styles.desktopScroll}
-              contentContainerStyle={styles.desktopScrollContent}
-              showsVerticalScrollIndicator={false}
-            >
+            <ScrollView style={styles.desktopScroll} contentContainerStyle={styles.desktopScrollContent} showsVerticalScrollIndicator={false}>
               <View style={styles.desktopMainCard}>
                 {/* Back button row */}
-                <TouchableOpacity
-                  style={styles.desktopBackRow}
-                  activeOpacity={0.8}
-                  onPress={handleBack}
-                >
+                <TouchableOpacity style={styles.desktopBackRow} activeOpacity={0.8} onPress={handleBack}>
                   <ArrowLeft size={18} color="#0E1E38" strokeWidth={2.4} />
                   <Text style={styles.desktopBackText}>Back</Text>
                 </TouchableOpacity>
@@ -524,13 +463,9 @@ export default function SavedLocationsScreen() {
                 {/* Header Title & Subtitle */}
                 <View style={styles.titleSection}>
                   <Text style={styles.pageTitle}>Saved Locations</Text>
-                  <Text style={styles.pageSubtitle}>
-                    Save your frequent locations for quicker bookings.
-                  </Text>
+                  <Text style={styles.pageSubtitle}>Save your frequent locations for quicker bookings.</Text>
                 </View>
-                {actionError ? (
-                  <Text style={{ color: '#DC2626', marginBottom: 12 }}>{actionError}</Text>
-                ) : null}
+                {actionError ? <Text style={{ color: '#DC2626', marginBottom: 12 }}>{actionError}</Text> : null}
 
                 {/* Location Cards */}
                 {renderLocationCards()}
@@ -556,21 +491,12 @@ export default function SavedLocationsScreen() {
 
       {/* Top Mobile Bar: Back Button & Centered DriverX Logo */}
       <View style={styles.mobileTopBar}>
-        <TouchableOpacity
-          style={styles.backButton}
-          activeOpacity={0.8}
-          onPress={handleBack}
-          accessibilityLabel="Go back"
-        >
+        <TouchableOpacity style={styles.backButton} activeOpacity={0.8} onPress={handleBack} accessibilityLabel="Go back">
           <ArrowLeft size={22} color="#0E1E38" strokeWidth={2.4} />
         </TouchableOpacity>
 
         <View style={styles.brandCenter}>
-          <Image
-            source={require('../../assets/DriveX_Logo.png')}
-            style={styles.logoEmblem}
-            resizeMode="contain"
-          />
+          <Image source={require('../../assets/DriveX_Logo.png')} style={styles.logoEmblem} resizeMode="contain" />
           <View style={styles.brandTextRow}>
             <Text style={styles.brandTextNavy}>Driver</Text>
             <Text style={styles.brandTextTeal}>X</Text>
@@ -588,13 +514,9 @@ export default function SavedLocationsScreen() {
         {/* Title & Subtitle */}
         <View style={styles.titleSection}>
           <Text style={styles.pageTitle}>Saved Locations</Text>
-          <Text style={styles.pageSubtitle}>
-            Save your frequent locations for quicker bookings.
-          </Text>
+          <Text style={styles.pageSubtitle}>Save your frequent locations for quicker bookings.</Text>
         </View>
-        {actionError ? (
-          <Text style={{ color: '#DC2626', marginBottom: 12 }}>{actionError}</Text>
-        ) : null}
+        {actionError ? <Text style={{ color: '#DC2626', marginBottom: 12 }}>{actionError}</Text> : null}
 
         {/* Saved Location Cards List */}
         {renderLocationCards()}

@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   ArrowLeft,
   Headphones,
@@ -36,9 +36,11 @@ import {
   AlertCircle,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { useBookingStore } from '../../src/store/bookingStore';
+import { DURATION_OPTIONS, useBookingStore } from '../../src/store/bookingStore';
+import { useAuthStore } from '../../src/store/authStore';
 import { DesktopHeader } from '../../src/components/common/DesktopHeader';
 import { DesktopSidebar } from '../../src/components/common/DesktopSidebar';
+import { isCustomerDesktop } from '../../src/theme/layout';
 import { InteractiveMap } from '../../src/components/common/InteractiveMap';
 import { FONT } from '../../src/theme/typography';
 import { homeApi } from '../../src/services/api/homeApi';
@@ -68,14 +70,15 @@ const ROUTE_POINTS = [
 
 export default function TrackDriverScreen() {
   const router = useRouter();
+  const { bookingId } = useLocalSearchParams<{ bookingId?: string }>();
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
-  const isDesktopOrTablet =
-    windowWidth > 600 ||
-    (Platform.OS === 'web' && typeof window !== 'undefined' && window.innerWidth > 600);
+  const isDesktopOrTablet = isCustomerDesktop(windowWidth);
 
   const pickupLocationStore = useBookingStore((state) => state.pickupLocation);
   const activeBooking = useBookingStore((state) => state.activeBooking);
+  const setActiveBooking = useBookingStore((state) => state.setActiveBooking);
+  const userId = useAuthStore((state) => state.user?.id);
 
   // Dynamic driver & trip state
   const [driverName, setDriverName] = useState('Ramesh Kumar');
@@ -116,13 +119,64 @@ export default function TrackDriverScreen() {
     }
   }, [activeBooking]);
 
+  useEffect(() => {
+    if (activeBooking && (!bookingId || activeBooking.id === bookingId)) {
+      setPickupAddress(activeBooking.pickupAddress);
+      return;
+    }
+
+    let isCurrent = true;
+    const loadBooking = async () => {
+      try {
+        if (bookingId) {
+          const booking = await bookingsApi.getBookingById(bookingId, userId);
+          if (!isCurrent) return;
+          const duration = DURATION_OPTIONS.find((option) => option.id === booking.durationId);
+          setActiveBooking({
+            id: booking.id,
+            status: booking.status,
+            durationId: booking.durationId,
+            durationLabel: booking.durationLabel,
+            hours: duration?.hours ?? 1,
+            pickupAddress: booking.pickupLocation,
+            dropAddress: booking.dropLocation,
+            pickupDate: booking.pickupDate || '',
+            pickupTime: booking.pickupTime || '',
+            fare: booking.fare,
+            driver: null,
+            createdAt: booking.createdAt,
+          });
+          setPickupAddress(booking.pickupLocation);
+          setActionMessage(null);
+          return;
+        }
+
+        const booking = await homeApi.getActiveBooking();
+        if (!isCurrent) return;
+        if (!booking) {
+          setActionMessage('There is no active booking to track right now.');
+          return;
+        }
+        setActiveBooking(booking);
+        setPickupAddress(booking.pickupAddress);
+        setActionMessage(null);
+      } catch (error: unknown) {
+        if (!isCurrent) return;
+        setActionMessage(
+          error instanceof Error ? error.message : 'Unable to load this booking right now.'
+        );
+      }
+    };
+
+    void loadBooking();
+    return () => {
+      isCurrent = false;
+    };
+  }, [activeBooking, bookingId, setActiveBooking, userId]);
+
   const handleBack = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    if (router.canGoBack()) {
-      router.back();
-    } else {
-      router.replace('/(customer)');
-    }
+    router.replace('/(customer)');
   };
 
   const handleCallDriver = () => {
@@ -198,6 +252,7 @@ export default function TrackDriverScreen() {
         if (activeBooking?.id) {
           await homeApi.cancelActiveBooking(activeBooking.id, 'Cancelled by customer');
         }
+        setActiveBooking(null);
         setActionMessage(null);
         router.replace('/(customer)');
       } catch (error) {
@@ -220,6 +275,9 @@ export default function TrackDriverScreen() {
         <Text style={styles.pageTitle}>Driver is on the way</Text>
         <Text style={styles.pageSubtitle}>
           Your driver will reach the pickup location soon.
+        </Text>
+        <Text style={styles.demoNotice}>
+          Demo preview · driver location and ETA are sample data
         </Text>
       </View>
       {actionMessage ? (
@@ -429,8 +487,10 @@ export default function TrackDriverScreen() {
       >
         <View style={styles.tripBannerDotLive} />
         <View style={{ flex: 1, marginLeft: 10 }}>
-          <Text style={styles.tripBannerTitle}>Driver Arrived • Trip in Progress</Text>
-          <Text style={styles.tripBannerSubtitle}>Tap to switch to live ride tracking</Text>
+          <Text style={styles.tripBannerTitle}>Demo: Preview Trip in Progress</Text>
+          <Text style={styles.tripBannerSubtitle}>
+            Open the next screen in the sample booking flow
+          </Text>
         </View>
         <Navigation size={16} color="#00D2B4" strokeWidth={2.4} />
       </TouchableOpacity>
@@ -641,7 +701,7 @@ export default function TrackDriverScreen() {
                   onPress={handleBack}
                 >
                   <ArrowLeft size={18} color="#0E1E38" strokeWidth={2.4} />
-                  <Text style={styles.desktopBackText}>Back to Bookings</Text>
+                  <Text style={styles.desktopBackText}>Back to Home</Text>
                 </TouchableOpacity>
 
                 {renderMainContent()}
@@ -794,6 +854,12 @@ const styles = StyleSheet.create({
     fontFamily: FONT.regular,
     color: '#64748B',
     marginTop: 3,
+  },
+  demoNotice: {
+    fontSize: 10.5,
+    fontFamily: FONT.medium,
+    color: '#64748B',
+    marginTop: 4,
   },
 
   // Map Container & Overlays

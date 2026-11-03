@@ -33,6 +33,7 @@ import {
 } from '../../src/store/bookingStore';
 import { DesktopHeader } from '../../src/components/common/DesktopHeader';
 import { DesktopSidebar } from '../../src/components/common/DesktopSidebar';
+import { isCustomerDesktop } from '../../src/theme/layout';
 import { FONT } from '../../src/theme/typography';
 
 /**
@@ -58,7 +59,7 @@ export default function SelectDurationScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
-  const isDesktopOrTablet = windowWidth > 600;
+  const isDesktopOrTablet = isCustomerDesktop(windowWidth);
 
   // Zustand State
   const selectedDurationId = useBookingStore((state) => state.selectedDurationId);

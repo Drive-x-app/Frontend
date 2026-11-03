@@ -28,7 +28,7 @@ import {
   Home as HomeIcon,
   Calendar,
   History,
-  User,
+  Settings,
   X,
   AlertCircle,
 } from 'lucide-react-native';
@@ -36,6 +36,7 @@ import * as Haptics from 'expo-haptics';
 import { useBookingStore } from '../../src/store/bookingStore';
 import { DesktopHeader } from '../../src/components/common/DesktopHeader';
 import { DesktopSidebar } from '../../src/components/common/DesktopSidebar';
+import { isCustomerDesktop } from '../../src/theme/layout';
 import { FONT } from '../../src/theme/typography';
 import { bookingsApi } from '../../src/services/api/bookingsApi';
 import {
@@ -70,9 +71,7 @@ export default function TripHistoryScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
-  const isDesktopOrTablet =
-    windowWidth > 600 ||
-    (Platform.OS === 'web' && typeof window !== 'undefined' && window.innerWidth > 600);
+  const isDesktopOrTablet = isCustomerDesktop(windowWidth);
 
   const activeTab = useBookingStore((state) => state.activeTab);
   const setActiveTab = useBookingStore((state) => state.setActiveTab);
@@ -87,6 +86,9 @@ export default function TripHistoryScreen() {
   );
   const [selectedTripDetails, setSelectedTripDetails] = useState<TripHistoryItem | null>(null);
   const [isFilterMenuVisible, setIsFilterMenuVisible] = useState(false);
+  const [ratingSelection, setRatingSelection] = useState(0);
+  const [isSubmittingRating, setIsSubmittingRating] = useState(false);
+  const [ratingError, setRatingError] = useState<string | null>(null);
 
   const fetchTrips = useCallback(async (isRefresh = false) => {
     if (isRefresh) {
@@ -195,6 +197,55 @@ export default function TripHistoryScreen() {
   const handleViewDetails = (trip: TripHistoryItem) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     setSelectedTripDetails(trip);
+    setRatingSelection(trip.userRating ?? 0);
+    setRatingError(null);
+  };
+
+  const handleSubmitRating = async () => {
+    if (!selectedTripDetails || ratingSelection < 1 || ratingSelection > 5) return;
+
+    setIsSubmittingRating(true);
+    setRatingError(null);
+    try {
+      const response = await bookingsApi.rateDriver(selectedTripDetails.id, ratingSelection);
+      const savedRating = response.driverRating;
+      if (savedRating === null || savedRating === undefined) {
+        throw new Error('The server did not confirm that your rating was saved.');
+      }
+
+      const updatedTrip = {
+        ...selectedTripDetails,
+        userRating: savedRating,
+        driver: {
+          ...selectedTripDetails.driver,
+          rating: response.driverAverageRating ?? selectedTripDetails.driver.rating,
+        },
+      };
+      setTrips((currentTrips) =>
+        currentTrips.map((trip) =>
+          trip.id === updatedTrip.id
+            ? {
+                ...trip,
+                userRating: savedRating,
+                driver: {
+                  ...trip.driver,
+                  rating: response.driverAverageRating ?? trip.driver.rating,
+                },
+              }
+            : trip,
+        ),
+      );
+      setSelectedTripDetails(updatedTrip);
+      setRatingSelection(savedRating);
+    } catch (error: any) {
+      setRatingError(
+        error?.response?.data?.message ||
+          error?.message ||
+          'Unable to save your rating. Please try again.',
+      );
+    } finally {
+      setIsSubmittingRating(false);
+    }
   };
 
   // Filter trips based on selected tab
@@ -260,7 +311,11 @@ export default function TripHistoryScreen() {
               </TouchableOpacity>
             </View>
 
-            <View style={styles.modalBody}>
+            <ScrollView
+              style={styles.modalScrollableBody}
+              contentContainerStyle={styles.modalBody}
+              showsVerticalScrollIndicator={false}
+            >
               <View style={styles.modalDateStatusRow}>
                 <Text style={styles.modalDateText}>
                   {selectedTripDetails.dateFormatted}
@@ -312,10 +367,16 @@ export default function TripHistoryScreen() {
                   </Text>
                 </View>
                 <View style={styles.modalRatingBox}>
-                  <Star size={11} color="#EAB308" fill="#EAB308" />
-                  <Text style={styles.modalRatingText}>
-                    {selectedTripDetails.driver.rating.toFixed(1)}
-                  </Text>
+                  {selectedTripDetails.driver.rating != null ? (
+                    <>
+                      <Star size={11} color="#EAB308" fill="#EAB308" />
+                      <Text style={styles.modalRatingText}>
+                        {selectedTripDetails.driver.rating.toFixed(1)}
+                      </Text>
+                    </>
+                  ) : (
+                    <Text style={styles.modalRatingText}>New</Text>
+                  )}
                 </View>
               </View>
 
@@ -334,7 +395,75 @@ export default function TripHistoryScreen() {
                   </Text>
                 </View>
               </View>
-            </View>
+
+              {selectedTripDetails.status === 'Completed' ? (
+                <View style={styles.driverRatingSection}>
+                  <Text style={styles.driverRatingTitle}>
+                    {selectedTripDetails.userRating != null
+                      ? 'Your driver rating'
+                      : 'Rate your driver'}
+                  </Text>
+                  {selectedTripDetails.driverId ? (
+                    <>
+                      <View style={styles.driverRatingStars}>
+                        {[1, 2, 3, 4, 5].map((rating) => (
+                          <TouchableOpacity
+                            key={rating}
+                            onPress={() => setRatingSelection(rating)}
+                            disabled={
+                              selectedTripDetails.userRating != null || isSubmittingRating
+                            }
+                            accessibilityRole="button"
+                            accessibilityLabel={`${rating} star${rating === 1 ? '' : 's'}`}
+                            accessibilityState={{
+                              selected: ratingSelection === rating,
+                              disabled:
+                                selectedTripDetails.userRating != null || isSubmittingRating,
+                            }}
+                            style={styles.driverRatingStarButton}
+                          >
+                            <Star
+                              size={30}
+                              color={rating <= ratingSelection ? '#EAB308' : '#CBD5E1'}
+                              fill={rating <= ratingSelection ? '#EAB308' : 'transparent'}
+                            />
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                      {selectedTripDetails.userRating != null ? (
+                        <Text style={styles.ratingSavedText}>
+                          Thanks for rating this driver {selectedTripDetails.userRating}/5.
+                        </Text>
+                      ) : (
+                        <TouchableOpacity
+                          style={[
+                            styles.submitRatingButton,
+                            (ratingSelection === 0 || isSubmittingRating) &&
+                              styles.submitRatingButtonDisabled,
+                          ]}
+                          onPress={handleSubmitRating}
+                          disabled={ratingSelection === 0 || isSubmittingRating}
+                          activeOpacity={0.8}
+                        >
+                          {isSubmittingRating ? (
+                            <ActivityIndicator size="small" color="#FFFFFF" />
+                          ) : (
+                            <Text style={styles.submitRatingButtonText}>Submit Rating</Text>
+                          )}
+                        </TouchableOpacity>
+                      )}
+                      {ratingError ? (
+                        <Text style={styles.ratingErrorText}>{ratingError}</Text>
+                      ) : null}
+                    </>
+                  ) : (
+                    <Text style={styles.ratingUnavailableText}>
+                      A driver has not been assigned to this trip.
+                    </Text>
+                  )}
+                </View>
+              ) : null}
+            </ScrollView>
 
             <TouchableOpacity
               style={styles.modalDismissBtn}
@@ -534,7 +663,7 @@ export default function TripHistoryScreen() {
                                   <View style={styles.dtRatingRow}>
                                     <Star size={11} color="#EAB308" fill="#EAB308" />
                                     <Text style={styles.dtRatingText}>
-                                      {trip.driver.rating.toFixed(1)}
+                                      {trip.driver.rating?.toFixed(1) ?? 'New'}
                                     </Text>
                                   </View>
                                   <Text style={styles.dtCarModelText} numberOfLines={1}>
@@ -574,7 +703,13 @@ export default function TripHistoryScreen() {
                                 activeOpacity={0.8}
                                 onPress={() => handleViewDetails(trip)}
                               >
-                                <Text style={styles.dtViewDetailsText}>View Details</Text>
+                                <Text style={styles.dtViewDetailsText}>
+                                  {trip.status === 'Completed' &&
+                                  trip.driverId &&
+                                  trip.userRating == null
+                                    ? 'Rate Driver'
+                                    : 'View Details'}
+                                </Text>
                                 <ChevronRight size={13} color="#0E1E38" strokeWidth={2.4} />
                               </TouchableOpacity>
                             </View>
@@ -803,7 +938,7 @@ export default function TripHistoryScreen() {
                                 fill="#EAB308"
                               />
                               <Text style={styles.ratingText}>
-                                {trip.driver.rating.toFixed(1)}
+                                {trip.driver.rating?.toFixed(1) ?? 'New'}
                               </Text>
                             </View>
                             <Text style={styles.carModelText} numberOfLines={1}>
@@ -847,7 +982,11 @@ export default function TripHistoryScreen() {
                           onPress={() => handleViewDetails(trip)}
                         >
                           <Text style={styles.viewDetailsText}>
-                            View Details
+                            {trip.status === 'Completed' &&
+                            trip.driverId &&
+                            trip.userRating == null
+                              ? 'Rate Driver'
+                              : 'View Details'}
                           </Text>
                           <ChevronRight
                             size={12}
@@ -942,16 +1081,16 @@ export default function TripHistoryScreen() {
               </Text>
             </TouchableOpacity>
 
-            {/* Profile Tab */}
+            {/* Settings Tab */}
             <TouchableOpacity
               style={styles.tabItem}
               activeOpacity={0.8}
               onPress={() => handleTabPress('profile')}
             >
               <View style={styles.tabActivePill}>
-                <User size={20} color="#94A3B8" strokeWidth={2.2} />
+                <Settings size={20} color="#94A3B8" strokeWidth={2.2} />
               </View>
-              <Text style={styles.tabLabel}>Profile</Text>
+              <Text style={styles.tabLabel}>Settings</Text>
             </TouchableOpacity>
           </View>
 
@@ -1799,6 +1938,7 @@ const styles = StyleSheet.create({
   modalCard: {
     width: '100%',
     maxWidth: 400,
+    maxHeight: '90%',
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 20,
@@ -1823,6 +1963,9 @@ const styles = StyleSheet.create({
   },
   modalCloseBtn: {
     padding: 4,
+  },
+  modalScrollableBody: {
+    flexShrink: 1,
   },
   modalBody: {
     paddingVertical: 14,
@@ -1926,6 +2069,62 @@ const styles = StyleSheet.create({
     fontFamily: FONT.bold,
     fontSize: 17,
     color: '#0E1E38',
+  },
+  driverRatingSection: {
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    paddingTop: 12,
+    gap: 8,
+  },
+  driverRatingTitle: {
+    fontFamily: FONT.semiBold,
+    fontSize: 13,
+    color: '#0E1E38',
+  },
+  driverRatingStars: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  driverRatingStarButton: {
+    padding: 2,
+  },
+  submitRatingButton: {
+    minWidth: 150,
+    minHeight: 40,
+    paddingHorizontal: 18,
+    borderRadius: 20,
+    backgroundColor: '#00D2B4',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  submitRatingButtonDisabled: {
+    opacity: 0.55,
+  },
+  submitRatingButtonText: {
+    fontFamily: FONT.bold,
+    fontSize: 13,
+    color: '#072038',
+  },
+  ratingSavedText: {
+    fontFamily: FONT.medium,
+    fontSize: 12,
+    color: '#059669',
+    textAlign: 'center',
+  },
+  ratingErrorText: {
+    fontFamily: FONT.medium,
+    fontSize: 12,
+    color: '#DC2626',
+    textAlign: 'center',
+  },
+  ratingUnavailableText: {
+    fontFamily: FONT.regular,
+    fontSize: 12,
+    color: '#64748B',
+    textAlign: 'center',
   },
   modalDismissBtn: {
     backgroundColor: '#00D2B4',

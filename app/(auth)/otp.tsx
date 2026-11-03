@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   TextInput,
+  ScrollView,
   TouchableOpacity,
   Image,
   KeyboardAvoidingView,
@@ -35,9 +36,10 @@ const INITIAL_TIMER_SECONDS = 30;
 export default function OtpScreen() {
   const router = useRouter();
   const inputRef = useRef<any>(null);
-  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
-  const isDesktop = windowWidth >= 960;
+  const { width: windowWidth } = useWindowDimensions();
+  const isDesktop = windowWidth >= 1280;
   const isDesktopOrTablet = windowWidth > 600;
+  const isTablet = isDesktopOrTablet && !isDesktop;
 
   // Zustand State
   const phoneNumber = useAuthStore((state) => state.phoneNumber);
@@ -169,14 +171,27 @@ export default function OtpScreen() {
   // Format timer as 00:SS
   const formattedTimer = `00:${timerSeconds < 10 ? `0${timerSeconds}` : timerSeconds}`;
 
-  const desktopFrameHeight = isDesktopOrTablet ? Math.min(windowHeight - 24, 880) : '100%';
+  const contentWidth = isDesktop
+    ? windowWidth * 0.56 - 128
+    : isTablet
+      ? windowWidth - 96
+      : windowWidth;
+  const otpBoxWidth = Math.min(
+    isDesktop ? 72 : isTablet ? 64 : 48,
+    (contentWidth - 44 - (OTP_LENGTH - 1) * 8) / OTP_LENGTH,
+  );
 
   const renderContent = () => (
-    <View style={styles.contentWrapper}>
+    <View style={isDesktop && styles.contentLayoutDesktop}>
       {/* Top Header & Graphic Section */}
-      <View style={styles.topHeaderContainer}>
+      <View
+        style={[
+          styles.topHeaderContainer,
+          isDesktop && styles.topHeaderContainerDesktop,
+        ]}
+      >
         {/* Left Side: Brand, Headline, Number */}
-        <View style={styles.headerLeftCol}>
+        <View style={[styles.headerLeftCol, isDesktop && styles.headerLeftColDesktop]}>
           {/* Brand Logo & Wordmark */}
           <View style={styles.brandRow}>
             <Image
@@ -185,25 +200,71 @@ export default function OtpScreen() {
               resizeMode="contain"
             />
             <View style={styles.brandTitleRow}>
-              <Text style={styles.brandTitleNavy}>Driver</Text>
-              <Text style={styles.brandTitleTeal}>X</Text>
+              <Text
+                style={[
+                  styles.brandTitleNavy,
+                  isTablet && styles.brandTitleTablet,
+                  isDesktop && styles.brandTitleDesktop,
+                ]}
+              >
+                Driver
+              </Text>
+              <Text
+                style={[
+                  styles.brandTitleTeal,
+                  isTablet && styles.brandTitleTablet,
+                  isDesktop && styles.brandTitleDesktop,
+                ]}
+              >
+                X
+              </Text>
             </View>
           </View>
 
           {/* Heading */}
           <View style={styles.titleContainer}>
-            <Text style={styles.titleNavy}>Verify Your</Text>
-            <Text style={styles.titleTeal}>Mobile Number</Text>
+            <Text
+              style={[
+                styles.titleNavy,
+                isTablet && styles.titleTablet,
+                isDesktop && styles.titleDesktop,
+              ]}
+            >
+              Verify Your
+            </Text>
+            <Text
+              style={[
+                styles.titleTeal,
+                isTablet && styles.titleTablet,
+                isDesktop && styles.titleDesktop,
+              ]}
+            >
+              Mobile Number
+            </Text>
           </View>
 
           {/* Description */}
-          <Text style={styles.descriptionText}>
+          <Text
+            style={[
+              styles.descriptionText,
+              isTablet && styles.descriptionTextTablet,
+              isDesktop && styles.descriptionTextDesktop,
+            ]}
+          >
             We have sent a 6-digit verification code to your mobile number
           </Text>
 
           {/* Phone Number with Edit Pencil Icon */}
           <View style={styles.phoneRow}>
-            <Text style={styles.phoneNumberText}>{displayPhone}</Text>
+            <Text
+              style={[
+                styles.phoneNumberText,
+                isTablet && styles.phoneNumberTextTablet,
+                isDesktop && styles.phoneNumberTextDesktop,
+              ]}
+            >
+              {displayPhone}
+            </Text>
             <TouchableOpacity
               style={styles.editIconButton}
               onPress={handleBack}
@@ -216,19 +277,41 @@ export default function OtpScreen() {
         </View>
 
         {/* Right Side: 3D Phone & Shield Illustration */}
-        <View style={styles.illustrationWrapper} pointerEvents="none">
-          <View style={styles.illustrationBackdrop} />
+        <View
+          style={[
+            styles.illustrationWrapper,
+            isDesktop && styles.illustrationWrapperDesktop,
+          ]}
+          pointerEvents="none"
+        >
+          <View
+            style={[
+              styles.illustrationBackdrop,
+              isDesktop && styles.illustrationBackdropDesktop,
+            ]}
+          />
           <Image
             source={require('../../assets/otp_illustration.jpg')}
-            style={styles.illustrationImage}
+            style={[
+              styles.illustrationImage,
+              isDesktop && styles.illustrationImageDesktop,
+            ]}
             resizeMode="contain"
           />
         </View>
       </View>
 
       {/* Verification Code Form Section */}
-      <View style={styles.formSection}>
-        <Text style={styles.inputLabel}>Enter Verification Code</Text>
+      <View style={[styles.formSection, isDesktop && styles.formSectionDesktop]}>
+        <Text
+          style={[
+            styles.inputLabel,
+            isTablet && styles.inputLabelTablet,
+            isDesktop && styles.inputLabelDesktop,
+          ]}
+        >
+          Enter Verification Code
+        </Text>
 
         {/* 6 OTP Code Input Boxes */}
         <Pressable
@@ -247,6 +330,9 @@ export default function OtpScreen() {
                 key={index}
                 style={[
                   styles.otpBox,
+                  isTablet && styles.otpBoxTablet,
+                  isDesktop && styles.otpBoxDesktop,
+                  { width: otpBoxWidth },
                   isFilled && styles.otpBoxFilled,
                   isCurrentBox && styles.otpBoxActive,
                   hasError && styles.otpBoxError,
@@ -315,6 +401,7 @@ export default function OtpScreen() {
         <TouchableOpacity
           style={[
             styles.verifyButtonWrapper,
+            isDesktop && styles.verifyButtonWrapperDesktop,
             (otp.length < OTP_LENGTH || isVerifying) && styles.verifyButtonDisabled,
           ]}
           activeOpacity={0.88}
@@ -331,7 +418,9 @@ export default function OtpScreen() {
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
               <View style={styles.verifyButtonContent}>
-                <Text style={styles.verifyButtonText}>Verify</Text>
+                <Text style={[styles.verifyButtonText, isDesktop && styles.verifyButtonTextDesktop]}>
+                  Verify
+                </Text>
                 <ArrowRight size={19} color="#FFFFFF" strokeWidth={2.6} style={styles.arrowIcon} />
               </View>
             )}
@@ -346,14 +435,7 @@ export default function OtpScreen() {
       <StatusBar style="dark" />
 
       {/* Frame Container */}
-      <View
-        style={[
-          styles.appFrame,
-          isDesktopOrTablet
-            ? [styles.appFrameDesktop, { height: desktopFrameHeight }]
-            : { height: '100%', flex: 1 },
-        ]}
-      >
+      <View style={[styles.appFrame, isDesktopOrTablet && styles.appFrameDesktop]}>
         {/* Bottom Cityscape & Highway Background Graphic */}
         <View pointerEvents="none" style={styles.bottomGraphicContainer}>
           <Image
@@ -365,7 +447,12 @@ export default function OtpScreen() {
 
         <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right', 'bottom']}>
           {/* Top Bar with Back Button */}
-          <View style={styles.topBar}>
+          <View
+            style={[
+              styles.topBar,
+              isDesktopOrTablet && styles.topBarDesktop,
+            ]}
+          >
             <TouchableOpacity
               style={styles.backButton}
               activeOpacity={0.7}
@@ -381,7 +468,18 @@ export default function OtpScreen() {
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             style={styles.keyboardContainer}
           >
-            {renderContent()}
+            <ScrollView
+              contentContainerStyle={[
+                styles.contentWrapper,
+                isDesktopOrTablet && styles.contentWrapperDesktop,
+                isTablet && styles.contentWrapperTablet,
+                isDesktop && styles.contentWrapperImmersive,
+              ]}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              {renderContent()}
+            </ScrollView>
           </KeyboardAvoidingView>
         </SafeAreaView>
       </View>
@@ -402,6 +500,7 @@ export default function OtpScreen() {
 const styles = StyleSheet.create({
   outerContainer: {
     flex: 1,
+    width: '100%',
     backgroundColor: '#F3F6FA',
     alignItems: 'center',
     justifyContent: 'center',
@@ -409,21 +508,16 @@ const styles = StyleSheet.create({
   appFrame: {
     width: '100%',
     maxWidth: '100%',
+    flex: 1,
     backgroundColor: '#FFFFFF',
     position: 'relative',
     overflow: 'hidden',
   },
   appFrameDesktop: {
-    maxWidth: 440,
-    borderRadius: 24,
-    marginVertical: 24,
-    shadowColor: '#071226',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.12,
-    shadowRadius: 28,
-    elevation: 8,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    maxWidth: '100%',
+    borderRadius: 0,
+    marginVertical: 0,
+    borderWidth: 0,
   },
   safeArea: {
     flex: 1,
@@ -435,6 +529,12 @@ const styles = StyleSheet.create({
     paddingBottom: 4,
     zIndex: 10,
   },
+  topBarDesktop: {
+    width: '100%',
+    maxWidth: '100%',
+    alignSelf: 'center',
+    paddingHorizontal: 32,
+  },
   backButton: {
     width: 40,
     height: 40,
@@ -445,9 +545,130 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentWrapper: {
-    flex: 1,
+    flexGrow: 1,
+    width: '100%',
     paddingHorizontal: 22,
     zIndex: 3,
+  },
+  contentWrapperDesktop: {
+    maxWidth: 1120,
+    alignSelf: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 40,
+  },
+  contentWrapperTablet: {
+    maxWidth: '100%',
+    paddingHorizontal: 40,
+  },
+  contentWrapperImmersive: {
+    maxWidth: '100%',
+    paddingHorizontal: 0,
+  },
+  contentLayoutDesktop: {
+    width: '100%',
+    minHeight: 640,
+    flexGrow: 1,
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: 0,
+  },
+  topHeaderContainerDesktop: {
+    width: '48%',
+    minHeight: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 0,
+    paddingHorizontal: 32,
+    backgroundColor: '#F3F8FC',
+  },
+  headerLeftColDesktop: {
+    width: 'auto',
+    flex: 1,
+    minWidth: 0,
+    paddingRight: 0,
+  },
+  illustrationWrapperDesktop: {
+    width: 240,
+    height: 260,
+    flexShrink: 0,
+    alignSelf: 'center',
+    marginTop: 0,
+    marginRight: 0,
+  },
+  illustrationImageDesktop: {
+    width: 230,
+    height: 230,
+  },
+  illustrationBackdropDesktop: {
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    top: 30,
+    right: 10,
+  },
+  formSectionDesktop: {
+    width: '52%',
+    maxWidth: 820,
+    flexGrow: 0,
+    flexShrink: 1,
+    alignSelf: 'center',
+    paddingHorizontal: 64,
+    marginTop: 0,
+  },
+  brandTitleTablet: {
+    fontSize: 24,
+  },
+  titleTablet: {
+    fontSize: 32,
+    lineHeight: 39,
+  },
+  descriptionTextTablet: {
+    maxWidth: 520,
+    fontSize: 16,
+    lineHeight: 24,
+    marginTop: 8,
+  },
+  phoneNumberTextTablet: {
+    fontSize: 18,
+  },
+  inputLabelTablet: {
+    fontSize: 18,
+    marginBottom: 16,
+  },
+  otpBoxTablet: {
+    height: 68,
+    borderRadius: 14,
+  },
+  brandTitleDesktop: {
+    fontSize: 28,
+  },
+  titleDesktop: {
+    fontSize: 38,
+    lineHeight: 46,
+  },
+  descriptionTextDesktop: {
+    maxWidth: 420,
+    fontSize: 18,
+    lineHeight: 27,
+    marginTop: 12,
+  },
+  phoneNumberTextDesktop: {
+    fontSize: 20,
+  },
+  inputLabelDesktop: {
+    fontSize: 20,
+    marginBottom: 20,
+  },
+  otpBoxDesktop: {
+    height: 80,
+    borderRadius: 16,
+  },
+  verifyButtonWrapperDesktop: {
+    marginTop: 44,
+  },
+  verifyButtonTextDesktop: {
+    fontSize: 20,
   },
 
   /* Top Header with Split Columns */

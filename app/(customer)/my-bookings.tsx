@@ -26,7 +26,7 @@ import {
   ChevronRight,
   Home as HomeIcon,
   History,
-  User,
+  Settings,
   X,
   AlertCircle,
   CheckCircle2,
@@ -43,6 +43,7 @@ import { useBookingStore } from '../../src/store/bookingStore';
 import { useAuthStore } from '../../src/store/authStore';
 import { DesktopHeader } from '../../src/components/common/DesktopHeader';
 import { DesktopSidebar } from '../../src/components/common/DesktopSidebar';
+import { isCustomerDesktop } from '../../src/theme/layout';
 import { FONT } from '../../src/theme/typography';
 import { bookingsApi, BackendBookingItem } from '../../src/services/api/bookingsApi';
 import {
@@ -83,14 +84,14 @@ export default function MyBookingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
-  const isDesktopOrTablet =
-    windowWidth > 600 ||
-    (Platform.OS === 'web' && typeof window !== 'undefined' && window.innerWidth > 600);
+  const isDesktopOrTablet = isCustomerDesktop(windowWidth);
 
   const activeTab = useBookingStore((state) => state.activeTab);
   const setActiveTab = useBookingStore((state) => state.setActiveTab);
   const setPickupLocation = useBookingStore((state) => state.setPickupLocation);
   const setDropLocation = useBookingStore((state) => state.setDropLocation);
+  const activeBooking = useBookingStore((state) => state.activeBooking);
+  const setActiveBooking = useBookingStore((state) => state.setActiveBooking);
   const authUser = useAuthStore((state) => state.user);
 
   const [bookings, setBookings] = useState<BookingDisplayItem[]>([]);
@@ -170,6 +171,9 @@ export default function MyBookingsScreen() {
       try {
         setIsCancelling(true);
         await bookingsApi.cancelBooking(item.id, 'Cancelled by customer', authUser?.id);
+        if (activeBooking?.id === item.id) {
+          setActiveBooking(null);
+        }
 
         // Update state locally with response
         setBookings((prev) =>
@@ -347,25 +351,55 @@ export default function MyBookingsScreen() {
         {/* Action Buttons */}
         <View style={styles.actionsBtnGroup}>
           {item.category === 'Upcoming' && (
-            <TouchableOpacity
-              style={styles.cancelActionBtn}
-              activeOpacity={0.8}
-              onPress={() => handleCancelBooking(item)}
-              disabled={isCancelling}
-            >
-              <Text style={styles.cancelActionText}>Cancel</Text>
-            </TouchableOpacity>
+            <>
+              <TouchableOpacity
+                style={styles.contactDriverBtn}
+                activeOpacity={0.8}
+                onPress={() =>
+                  router.push({
+                    pathname: '/(customer)/track-driver',
+                    params: { bookingId: item.id },
+                  })
+                }
+              >
+                <Navigation size={13} color="#00A892" strokeWidth={2.4} />
+                <Text style={styles.contactDriverText}>Track</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.cancelActionBtn}
+                activeOpacity={0.8}
+                onPress={() => handleCancelBooking(item)}
+                disabled={isCancelling}
+              >
+                <Text style={styles.cancelActionText}>Cancel</Text>
+              </TouchableOpacity>
+            </>
           )}
 
           {item.category === 'Ongoing' && (
-            <TouchableOpacity
-              style={styles.contactDriverBtn}
-              activeOpacity={0.8}
-              onPress={() => handleContactDriver(item.driverPhone)}
-            >
-              <Phone size={13} color="#00D2B4" strokeWidth={2.4} />
-              <Text style={styles.contactDriverText}>Call Driver</Text>
-            </TouchableOpacity>
+            <>
+              <TouchableOpacity
+                style={styles.contactDriverBtn}
+                activeOpacity={0.8}
+                onPress={() => handleContactDriver(item.driverPhone)}
+              >
+                <Phone size={13} color="#00D2B4" strokeWidth={2.4} />
+                <Text style={styles.contactDriverText}>Call Driver</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.contactDriverBtn}
+                activeOpacity={0.8}
+                onPress={() =>
+                  router.push({
+                    pathname: '/(customer)/trip-in-progress',
+                    params: { bookingId: item.id },
+                  })
+                }
+              >
+                <Navigation size={13} color="#00A892" strokeWidth={2.4} />
+                <Text style={styles.contactDriverText}>Track</Text>
+              </TouchableOpacity>
+            </>
           )}
 
           {(item.category === 'Completed' || item.category === 'Cancelled') && (
@@ -529,11 +563,31 @@ export default function MyBookingsScreen() {
                     activeOpacity={0.85}
                     onPress={() => {
                       setSelectedBookingDetails(null);
-                      router.push('/(customer)/trip-in-progress');
+                      router.push({
+                        pathname: '/(customer)/trip-in-progress',
+                        params: { bookingId: b.id },
+                      });
                     }}
                   >
                     <Navigation size={14} color="#072038" strokeWidth={2.4} />
                     <Text style={styles.modalRebookText}>Track Trip in Progress</Text>
+                  </TouchableOpacity>
+                )}
+
+                {b.category === 'Upcoming' && (
+                  <TouchableOpacity
+                    style={styles.modalRebookBtn}
+                    activeOpacity={0.85}
+                    onPress={() => {
+                      setSelectedBookingDetails(null);
+                      router.push({
+                        pathname: '/(customer)/track-driver',
+                        params: { bookingId: b.id },
+                      });
+                    }}
+                  >
+                    <Navigation size={14} color="#072038" strokeWidth={2.4} />
+                    <Text style={styles.modalRebookText}>Track Driver</Text>
                   </TouchableOpacity>
                 )}
 
@@ -981,16 +1035,16 @@ export default function MyBookingsScreen() {
               <Text style={styles.tabLabel}>Trip History</Text>
             </TouchableOpacity>
 
-            {/* Profile Tab */}
+            {/* Settings Tab */}
             <TouchableOpacity
               style={styles.tabItem}
               activeOpacity={0.8}
               onPress={() => handleTabPress('profile')}
             >
               <View style={styles.tabActivePill}>
-                <User size={20} color="#94A3B8" strokeWidth={2.4} />
+                <Settings size={20} color="#94A3B8" strokeWidth={2.4} />
               </View>
-              <Text style={styles.tabLabel}>Profile</Text>
+              <Text style={styles.tabLabel}>Settings</Text>
             </TouchableOpacity>
           </View>
         </SafeAreaView>

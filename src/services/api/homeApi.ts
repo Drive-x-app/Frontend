@@ -85,8 +85,10 @@ export interface BackendHomeScreenData {
 }
 
 export const homeApi = {
-  getHomeScreenData: async (): Promise<BackendHomeScreenData> => {
-    const response = await apiClient.get<BackendHomeScreenData>('/home');
+  getHomeScreenData: async (phoneNumber: string): Promise<BackendHomeScreenData> => {
+    const response = await apiClient.get<BackendHomeScreenData>('/home', {
+      params: { phoneNumber },
+    });
     return response.data;
   },
 
@@ -110,24 +112,31 @@ export const homeApi = {
     return response.data;
   },
 
-  getSavedPlaces: async (): Promise<BackendSavedPlace[]> => {
-    const response = await apiClient.get<BackendSavedPlace[]>('/home/saved-places');
+  getSavedPlaces: async (phoneNumber: string): Promise<BackendSavedPlace[]> => {
+    const response = await apiClient.get<BackendSavedPlace[]>('/home/saved-places', {
+      params: { phoneNumber },
+    });
     return response.data;
   },
 
   addSavedPlace: async (params: {
+    phoneNumber: string;
     title: string;
     address: string;
     type: 'home' | 'office' | 'parents' | 'other';
     latitude?: number;
     longitude?: number;
   }): Promise<BackendSavedPlace> => {
-    const response = await apiClient.post<BackendSavedPlace>('/home/saved-places', params);
+    const { phoneNumber, ...place } = params;
+    const response = await apiClient.post<BackendSavedPlace>('/home/saved-places', place, {
+      params: { phoneNumber },
+    });
     return response.data;
   },
 
   updateSavedPlace: async (
     id: string,
+    phoneNumber: string,
     params: Partial<{
       title: string;
       address: string;
@@ -136,12 +145,16 @@ export const homeApi = {
       longitude?: number;
     }>,
   ): Promise<BackendSavedPlace> => {
-    const response = await apiClient.patch<BackendSavedPlace>(`/home/saved-places/${id}`, params);
+    const response = await apiClient.patch<BackendSavedPlace>(`/home/saved-places/${id}`, params, {
+      params: { phoneNumber },
+    });
     return response.data;
   },
 
-  deleteSavedPlace: async (id: string) => {
-    const response = await apiClient.delete(`/home/saved-places/${id}`);
+  deleteSavedPlace: async (id: string, phoneNumber: string) => {
+    const response = await apiClient.delete(`/home/saved-places/${id}`, {
+      params: { phoneNumber },
+    });
     return response.data;
   },
 

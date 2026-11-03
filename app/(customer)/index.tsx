@@ -22,7 +22,7 @@ import {
   Home as HomeIcon,
   MoreVertical,
   History,
-  User,
+  Settings,
   ChevronRight,
   ChevronDown,
   Wifi,
@@ -43,8 +43,10 @@ import { FONT } from '../../src/theme/typography';
 import { TrustFeaturesBar } from '../../src/components/common/TrustFeaturesBar';
 import { SavedPlaceCard } from '../../src/components/common/SavedPlaceCard';
 import { RecentBookingCard } from '../../src/components/common/RecentBookingCard';
+import { ActiveBookingCard } from '../../src/components/common/ActiveBookingCard';
 import { DesktopHeader } from '../../src/components/common/DesktopHeader';
 import { DesktopSidebar } from '../../src/components/common/DesktopSidebar';
+import { isCustomerDesktop } from '../../src/theme/layout';
 import { DurationPill } from '../../src/components/common/DurationPill';
 import { LocationInputCard } from '../../src/components/common/LocationInputCard';
 
@@ -78,9 +80,7 @@ const DotGrid = () => {
 export default function CustomerHomeScreen() {
   const router = useRouter();
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
-  const isDesktopOrTablet =
-    windowWidth > 600 ||
-    (Platform.OS === 'web' && typeof window !== 'undefined' && window.innerWidth > 600);
+  const isDesktopOrTablet = isCustomerDesktop(windowWidth);
   const [isLocating, setIsLocating] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
 
@@ -93,6 +93,7 @@ export default function CustomerHomeScreen() {
   const userName = useBookingStore((state) => state.userName);
   const unreadNotifications = useBookingStore((state) => state.unreadNotifications);
   const recentBookings = useBookingStore((state) => state.recentBookings);
+  const activeBooking = useBookingStore((state) => state.activeBooking);
   const loadHomeScreenData = useBookingStore((state) => state.loadHomeScreenData);
   const markNotificationsAsRead = useBookingStore((state) => state.markNotificationsAsRead);
 
@@ -190,6 +191,17 @@ export default function CustomerHomeScreen() {
               contentContainerStyle={styles.desktopScrollContent}
               showsVerticalScrollIndicator={false}
             >
+              {activeBooking ? (
+                <ActiveBookingCard
+                  booking={activeBooking}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/(customer)/track-driver',
+                      params: { bookingId: activeBooking.id },
+                    })
+                  }
+                />
+              ) : null}
               <View style={styles.desktopMainRow}>
                 {/* LEFT COLUMN: Hero Banner Card */}
                 <View style={styles.desktopHeroCard}>
@@ -342,6 +354,17 @@ export default function CustomerHomeScreen() {
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
           >
+            {activeBooking ? (
+              <ActiveBookingCard
+                booking={activeBooking}
+                onPress={() =>
+                  router.push({
+                    pathname: '/(customer)/track-driver',
+                    params: { bookingId: activeBooking.id },
+                  })
+                }
+              />
+            ) : null}
             {/* 1. Hero Promo Banner (Using exact user-provided asset) */}
             <View style={styles.heroBanner}>
               <Image
@@ -560,14 +583,14 @@ export default function CustomerHomeScreen() {
                 </Text>
               </TouchableOpacity>
 
-              {/* Profile Tab */}
+              {/* Settings Tab */}
               <TouchableOpacity
                 style={styles.tabItem}
                 activeOpacity={0.8}
                 onPress={() => handleTabPress('profile')}
               >
                 <View style={[styles.tabActivePill, activeTab === 'profile' && styles.tabActivePillSelected]}>
-                  <User
+                  <Settings
                     size={20}
                     color={activeTab === 'profile' ? '#00D2B4' : '#94A3B8'}
                     strokeWidth={2.2}
@@ -579,7 +602,7 @@ export default function CustomerHomeScreen() {
                     activeTab === 'profile' && styles.tabLabelActive,
                   ]}
                 >
-                  Profile
+                  Settings
                 </Text>
               </TouchableOpacity>
             </View>

@@ -17,6 +17,8 @@ export interface BackendBookingItem {
   paymentStatus: string;
   driverId: string | null;
   driverName: string | null;
+  driverAverageRating?: number | null;
+  driverRating?: number | null;
   createdAt: string;
   completedAt: string | null;
 }
@@ -86,6 +88,19 @@ export const bookingsApi = {
     const response = await apiClient.patch<BackendBookingItem>(
       `/bookings/${id}/cancel`,
       { reason },
+      { params: userId ? { userId } : undefined },
+    );
+    return response.data;
+  },
+
+  /**
+   * PATCH /api/v1/bookings/:id/rating
+   * Saves the customer's one-time rating for a completed trip.
+   */
+  rateDriver: async (id: string, rating: number, userId?: string): Promise<BackendBookingItem> => {
+    const response = await apiClient.patch<BackendBookingItem>(
+      `/bookings/${id}/rating`,
+      { rating },
       { params: userId ? { userId } : undefined },
     );
     return response.data;

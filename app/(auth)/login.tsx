@@ -20,7 +20,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import {
-  ArrowLeft,
   ArrowRight,
   Phone,
   ChevronDown,
@@ -70,13 +69,6 @@ export default function LoginScreen() {
 
   const handlePhoneNumberChange = (text: string) => {
     setPhoneNumber(text);
-  };
-
-  const handleBack = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    if (router.canGoBack()) {
-      router.back();
-    }
   };
 
   const handleContinue = async () => {
@@ -439,22 +431,8 @@ export default function LoginScreen() {
           </View>
         </View>
 
-        {/* RIGHT PANE: Back button, Logo, Welcome Back, Form */}
+        {/* RIGHT PANE: Logo, Welcome Back, Form */}
         <View style={styles.desktopRightPane}>
-          {/* Top navigation Back button */}
-          <View style={styles.desktopTopBar}>
-            <TouchableOpacity
-              style={styles.desktopBackButton}
-              activeOpacity={0.7}
-              onPress={handleBack}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              accessibilityLabel="Go back"
-            >
-              <ArrowLeft size={18} color="#64748B" strokeWidth={2.2} />
-              <Text style={styles.desktopBackText}>Back</Text>
-            </TouchableOpacity>
-          </View>
-
           {/* Form Content Area (Centered) */}
           <View style={styles.desktopFormWrapper}>
             <View style={styles.desktopFormContainer}>
@@ -518,19 +496,6 @@ export default function LoginScreen() {
         </View>
 
         <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right', 'bottom']}>
-          {/* Top Navigation Bar with Back Button */}
-          <View style={styles.topBar}>
-            <TouchableOpacity
-              style={styles.backButton}
-              activeOpacity={0.7}
-              onPress={handleBack}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              accessibilityLabel="Go back"
-            >
-              <ArrowLeft size={24} color="#0E1E38" strokeWidth={2.4} />
-            </TouchableOpacity>
-          </View>
-
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             style={styles.contentContainer}
@@ -629,17 +594,6 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     zIndex: 1,
-  },
-  topBar: {
-    paddingHorizontal: 22,
-    paddingTop: 8,
-    paddingBottom: 4,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'flex-start',
   },
   contentContainer: {
     flex: 1,
@@ -1096,21 +1050,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 48,
     width: '100%',
     alignItems: 'flex-start',
-  },
-  desktopBackButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-    marginLeft: -8,
-    borderRadius: 8,
-    ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : {}),
-  },
-  desktopBackText: {
-    fontFamily: FONT.medium,
-    fontSize: 14.5,
-    color: '#64748B',
   },
   desktopFormWrapper: {
     flex: 1,

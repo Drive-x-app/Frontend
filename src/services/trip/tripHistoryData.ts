@@ -2,7 +2,7 @@ export type TripStatus = 'Completed' | 'Scheduled' | 'Cancelled';
 
 export interface TripHistoryDriver {
   name: string;
-  rating: number;
+  rating: number | null;
   carModel: string;
   plateNumber: string;
 }
@@ -13,6 +13,8 @@ export interface TripHistoryItem {
   dateFormatted: string; // e.g. "Tue, 14 Oct 2026"
   timeSlot: string; // e.g. "10:00 AM – 02:05 PM"
   status: TripStatus;
+  driverId?: string | null;
+  userRating?: number | null;
   pickupAddress: string;
   dropAddress: string;
   durationLabel: string;
@@ -192,13 +194,15 @@ export function mapBookingToTripHistoryItem(booking: BackendBookingItem): TripHi
     dateFormatted,
     timeSlot,
     status,
+    driverId: booking.driverId,
+    userRating: booking.driverRating ?? null,
     pickupAddress: booking.pickupLocation || 'Coimbatore',
     dropAddress: booking.dropLocation || 'Round Trip / City Center',
     durationLabel: booking.durationLabel || '2 Hours',
     fare: Math.round(booking.fare || 0),
     driver: {
       name: defaultDriverName,
-      rating: 4.8,
+      rating: booking.driverAverageRating ?? null,
       carModel: 'Chauffeured Vehicle',
       plateNumber: 'TN 38 DriverX',
     },
